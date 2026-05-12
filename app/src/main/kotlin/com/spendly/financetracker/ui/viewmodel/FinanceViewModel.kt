@@ -98,11 +98,36 @@ class FinanceViewModel(
         }
     }
 
+    fun selectTab(tab: AppTab) {
+        _uiState.update { it.copy(currentTab = tab) }
+    }
+
+    fun selectTransactionTab(tab: TransactionTab) {
+        _uiState.update { it.copy(transactionTab = tab) }
+    }
+
+    fun addGoal() {
+        _uiState.update {
+            val nextIndex = it.goals.size + 1
+            val newGoal = Goal(
+                id = "goal-$nextIndex",
+                title = "New Goal $nextIndex",
+                targetCents = 120_000_00L,
+                savedCents = 18_000_00L,
+                dueDate = "Dec 2026",
+                category = "Custom",
+                isPrimary = false
+            )
+
+            it.copy(goals = it.goals + newGoal, message = "Added a new goal")
+        }
+    }
+
     fun signOut() {
         transactionsJob?.cancel()
         transactionsJob = null
         authRepository.signOut()
-        _uiState.update { it.copy(transactions = emptyList()) }
+        _uiState.update { it.copy(transactions = emptyList(), currentTab = AppTab.HOME, transactionTab = TransactionTab.ALL) }
     }
 
     fun updateTransactionTitle(title: String) {

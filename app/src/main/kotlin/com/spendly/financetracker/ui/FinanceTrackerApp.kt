@@ -16,8 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spendly.financetracker.ui.screen.AuthScreen
-import com.spendly.financetracker.ui.screen.DashboardScreen
 import com.spendly.financetracker.ui.screen.FirebaseSetupScreen
+import com.spendly.financetracker.ui.screen.MainAppScreen
 import com.spendly.financetracker.ui.viewmodel.FinanceViewModel
 
 @Composable
@@ -45,9 +45,12 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
                 onSubmit = viewModel::submitAuth,
                 onToggleMode = viewModel::toggleAuthMode
             )
-            else -> DashboardScreen(
+            else -> MainAppScreen(
                 state = state,
                 contentPadding = padding,
+                onTabSelected = viewModel::selectTab,
+                onTransactionTabSelected = viewModel::selectTransactionTab,
+                onAddGoal = viewModel::addGoal,
                 onSignOut = viewModel::signOut,
                 onTitleChange = viewModel::updateTransactionTitle,
                 onAmountChange = viewModel::updateTransactionAmount,
