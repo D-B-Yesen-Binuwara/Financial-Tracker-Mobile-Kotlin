@@ -1,75 +1,70 @@
 package com.spendly.financetracker.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Receipt
+import androidx.compose.material.icons.outlined.TrackChanges
+import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.spendly.financetracker.ui.theme.SpendlyGray500
+import com.spendly.financetracker.ui.theme.SpendlyGreen
+import com.spendly.financetracker.ui.theme.SpendlyGreenLight
 import com.spendly.financetracker.ui.viewmodel.AppTab
 
 typealias OnTabSelected = (AppTab) -> Unit
 
+private data class BottomNavSpec(
+    val tab: AppTab,
+    val label: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
+)
+
 @Composable
 fun AppBottomNavigation(currentTab: AppTab, onTabSelected: OnTabSelected) {
     val items = listOf(
-        AppTab.HOME,
-        AppTab.TRANSACTIONS,
-        AppTab.GOALS,
-        AppTab.ANALYTICS,
-        AppTab.PROFILE
+        BottomNavSpec(AppTab.HOME, "Home", Icons.Filled.Home, Icons.Outlined.Home),
+        BottomNavSpec(AppTab.TRANSACTIONS, "History", Icons.Filled.Receipt, Icons.Outlined.Receipt),
+        BottomNavSpec(AppTab.ANALYTICS, "Analytics", Icons.Filled.BarChart, Icons.Outlined.BarChart),
+        BottomNavSpec(AppTab.GOALS, "Goal", Icons.Filled.TrackChanges, Icons.Outlined.TrackChanges),
+        BottomNavSpec(AppTab.PROFILE, "Profile", Icons.Filled.Person, Icons.Outlined.Person)
     )
 
-    NavigationBar {
-        items.forEach { tab ->
+    NavigationBar(containerColor = Color.White) {
+        items.forEach { item ->
+            val selected = currentTab == item.tab
             NavigationBarItem(
-                selected = currentTab == tab,
-                onClick = { onTabSelected(tab) },
-                icon = { BottomNavIcon(tab = tab, selected = currentTab == tab) },
-                label = { Text(tab.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                selected = selected,
+                onClick = { onTabSelected(item.tab) },
+                icon = {
+                    Icon(
+                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                        contentDescription = item.label
+                    )
+                },
+                label = { Text(item.label) },
                 alwaysShowLabel = true,
                 colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    selectedIconColor = SpendlyGreen,
+                    selectedTextColor = SpendlyGreen,
+                    indicatorColor = SpendlyGreenLight,
+                    unselectedIconColor = SpendlyGray500,
+                    unselectedTextColor = SpendlyGray500
                 )
             )
         }
-    }
-}
-
-@Composable
-private fun BottomNavIcon(tab: AppTab, selected: Boolean) {
-    val label = when (tab) {
-        AppTab.HOME -> "H"
-        AppTab.TRANSACTIONS -> "T"
-        AppTab.GOALS -> "G"
-        AppTab.ANALYTICS -> "A"
-        AppTab.PROFILE -> "P"
-    }
-
-    Box(
-        modifier = Modifier
-            .size(32.dp)
-            .clip(CircleShape)
-            .background(
-                if (selected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.surfaceVariant
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
