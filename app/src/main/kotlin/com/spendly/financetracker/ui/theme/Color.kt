@@ -38,8 +38,4 @@ val ChartColors = listOf(
     ChartPurple,
     ChartTeal,
     ChartCoral
-<<<<<<< HEAD
 )
-=======
-)
->>>>>>> b3f29908ce4a5ace9b5d0a1056946f564fab816e
