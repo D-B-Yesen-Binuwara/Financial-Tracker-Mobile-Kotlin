@@ -173,5 +173,3 @@ FinanceViewModel (Single Source of Truth)
         ├── Data Models
         └── ViewModels
 ```
-
----
