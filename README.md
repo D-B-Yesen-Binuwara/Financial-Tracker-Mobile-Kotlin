@@ -173,3 +173,40 @@ FinanceViewModel (Single Source of Truth)
         ├── Data Models
         └── ViewModels
 ```
+
+---
+
+      ## Shared / Core Files and Ownership
+
+      These files are core to the app and should be treated as shared ownership. Some files have a clear primary maintainer (listed), but everyone depends on them.
+
+      **Belongs to all (shared / core):**
+      - `app/src/main/kotlin/com/spendly/financetracker/ui/viewmodel/FinanceViewModel.kt` — central ViewModel coordinating UI state
+      - `app/src/main/kotlin/com/spendly/financetracker/ui/viewmodel/FinanceUiState.kt` — UI state definitions used by all screens
+      - `app/src/main/kotlin/com/spendly/financetracker/ui/FinanceTrackerApp.kt` — app entry + high-level orchestration
+      - Data models:
+         - `app/src/main/kotlin/com/spendly/financetracker/data/model/FinanceTransaction.kt`
+         - `app/src/main/kotlin/com/spendly/financetracker/data/model/UserSession.kt`
+      - `app/src/main/kotlin/com/spendly/financetracker/data/repository/TransactionRepository.kt` — repository interface (implementation owned by Mahima)
+
+      **Primary owner — Mahima (Firebase / backend):**
+      - `app/src/main/kotlin/com/spendly/financetracker/data/firebase/FirebaseBootstrap.kt`
+      - `app/src/main/kotlin/com/spendly/financetracker/data/repository/FirebaseAuthRepository.kt`
+      - `app/src/main/kotlin/com/spendly/financetracker/data/repository/FirebaseTransactionRepository.kt`
+
+      **Shared UI components (`<belongs to all>`):**
+      - `app/src/main/kotlin/com/spendly/financetracker/ui/components/AppBottomNavigation.kt`
+      - `app/src/main/kotlin/com/spendly/financetracker/ui/components/HeaderSection.kt`
+      - `app/src/main/kotlin/com/spendly/financetracker/ui/components/SummaryCard.kt`
+      - `app/src/main/kotlin/com/spendly/financetracker/ui/components/SummaryPanel.kt`
+      - `app/src/main/kotlin/com/spendly/financetracker/ui/components/TransactionListItem.kt`
+      - `app/src/main/kotlin/com/spendly/financetracker/ui/components/GoalCard.kt`
+      - `app/src/main/kotlin/com/spendly/financetracker/ui/components/ProfileStat.kt`
+
+      **Distribution check & guidance:**
+      - The `FinanceViewModel` and `FinanceUiState` are intentionally shared — they coordinate state across all screens and should be reviewed by any PR that changes them.
+      - `TransactionRepository.kt` is the shared abstraction; keep the interface stable. Mahima owns the Firebase implementation.
+      - Components under `ui/components` are shared utilities and belong to all; small UI fixes can be made by any member but large refactors should be coordinated.
+
+      **Commit guidance:**
+      - Core/shared files (ViewModel, UI state, components) should be committed early (Phase 1). Mahima's Firebase commits should precede integration work that depends on the backend.
