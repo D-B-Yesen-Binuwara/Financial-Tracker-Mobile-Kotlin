@@ -18,33 +18,46 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Laptop
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.spendly.financetracker.ui.components.NoGoalState
@@ -59,15 +72,18 @@ import com.spendly.financetracker.ui.theme.SpendlyGreenLight
 import com.spendly.financetracker.ui.util.formatMoney
 import com.spendly.financetracker.ui.viewmodel.FinanceUiState
 import com.spendly.financetracker.ui.viewmodel.Goal
+import com.spendly.financetracker.ui.viewmodel.GoalDraft
 
 typealias OnAddGoal = () -> Unit
+typealias OnGoalSelected = (String) -> Unit
+typealias OnSaveGoal = (GoalDraft) -> Boolean
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoalsScreen(
     state: FinanceUiState,
     onAddGoal: OnAddGoal,
-    onGoalSelected: () -> Unit
+    onGoalSelected: OnGoalSelected
 ) {
     val otherGoals = state.goals.filter { !it.isPrimary }
 
@@ -112,7 +128,7 @@ fun GoalsScreen(
                     item {
                         PrimaryGoalCard(
                             goal = goal,
-                            onClick = onGoalSelected
+                            onClick = { onGoalSelected(goal.id) }
                         )
                     }
                 }
@@ -128,12 +144,164 @@ fun GoalsScreen(
                     items(otherGoals, key = { it.id }) { goal ->
                         OtherGoalRow(
                             goal = goal,
-                            onClick = onGoalSelected
+                            onClick = { onGoalSelected(goal.id) }
                         )
                     }
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddGoalScreen(
+    onBack: () -> Unit,
+    onSave: OnSaveGoal
+) {
+    var goalName by rememberSaveable { mutableStateOf("") }
+    var status by rememberSaveable { mutableStateOf("") }
+    var targetAmount by rememberSaveable { mutableStateOf("") }
+    var targetDate by rememberSaveable { mutableStateOf("") }
+    var initialSaved by rememberSaveable { mutableStateOf("") }
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                title = { Text("Add New Goal", fontWeight = FontWeight.Bold) },
+                actions = {
+                    Button(
+                        onClick = {
+                            onSave(
+                                GoalDraft(
+                                    title = goalName,
+                                    status = status,
+                                    targetAmount = targetAmount,
+                                    targetDate = targetDate,
+                                    initialSaved = initialSaved
+                                )
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = SpendlyGreen,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .padding(end = 16.dp)
+                            .height(40.dp),
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 0.dp)
+                    ) {
+                        Text("Save", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(SpendlyGreenLight, RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.TrackChanges,
+                        contentDescription = null,
+                        tint = SpendlyGreen
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(
+                        "Set a Target",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SpendlyGray900,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "Plan your next big purchase",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SpendlyGray500
+                    )
+                }
+            }
+
+            GoalFormField(
+                label = "Goal Name",
+                value = goalName,
+                onValueChange = { goalName = it },
+                placeholder = "e.g. Dream Vacation"
+            )
+            GoalFormField(
+                label = "Status",
+                value = status,
+                onValueChange = { status = it },
+                placeholder = "e.g. On track"
+            )
+            GoalFormField(
+                label = "Target Amount",
+                value = targetAmount,
+                onValueChange = { targetAmount = it },
+                placeholder = "0",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+            GoalFormField(
+                label = "Target Date",
+                value = targetDate,
+                onValueChange = { targetDate = it },
+                placeholder = "e.g. Dec 2026"
+            )
+            GoalFormField(
+                label = "Initial Saved (Optional)",
+                value = initialSaved,
+                onValueChange = { initialSaved = it },
+                placeholder = "0",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+        }
+    }
+}
+
+@Composable
+private fun GoalFormField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = SpendlyGray900,
+            fontWeight = FontWeight.Bold
+        )
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(placeholder, color = SpendlyGray500) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            keyboardOptions = keyboardOptions
+        )
     }
 }
 
@@ -168,7 +336,7 @@ private fun PrimaryGoalCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
-                        Text("ON TRACK", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        Text(goal.status.uppercase(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                     }
                 }
             }
@@ -263,21 +431,24 @@ private fun OtherGoalRow(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrimaryGoalDetailScreen(
+fun GoalDetailScreen(
     state: FinanceUiState,
+    goalId: String?,
     onBack: () -> Unit
 ) {
-    val goal = state.primaryGoal
+    val goal = goalId?.let { selectedGoalId ->
+        state.goals.firstOrNull { it.id == selectedGoalId }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                title = { Text("Primary Goal", fontWeight = FontWeight.Bold) }
+                title = { Text(goal?.title ?: "Goal Details", fontWeight = FontWeight.Bold) }
             )
         }
     ) { padding ->
@@ -315,6 +486,7 @@ fun PrimaryGoalDetailScreen(
                             DetailRow("Saved", formatMoney(goal.savedCents))
                             DetailRow("Remaining", formatMoney(goal.remainingCents))
                             DetailRow("Target date", goal.dueDate)
+                            DetailRow("Status", goal.status)
                             DetailRow("Category", goal.category)
                             DetailRow("Required monthly", formatMoney(goal.remainingCents / 12L))
                         }

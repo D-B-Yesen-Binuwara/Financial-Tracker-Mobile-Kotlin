@@ -16,9 +16,9 @@ import com.spendly.financetracker.data.model.TransactionType
 import com.spendly.financetracker.ui.components.AppBottomNavigation
 import com.spendly.financetracker.ui.components.OnTabSelected
 import com.spendly.financetracker.ui.screen.analytics.AnalyticsScreen
+import com.spendly.financetracker.ui.screen.goals.AddGoalScreen
+import com.spendly.financetracker.ui.screen.goals.GoalDetailScreen
 import com.spendly.financetracker.ui.screen.goals.GoalsScreen
-import com.spendly.financetracker.ui.screen.goals.OnAddGoal
-import com.spendly.financetracker.ui.screen.goals.PrimaryGoalDetailScreen
 import com.spendly.financetracker.ui.screen.home.HomeScreen
 import com.spendly.financetracker.ui.screen.profile.ProfileScreen
 import com.spendly.financetracker.ui.screen.transactions.AddTransactionScreen
@@ -26,11 +26,13 @@ import com.spendly.financetracker.ui.screen.transactions.OnTransactionTabSelecte
 import com.spendly.financetracker.ui.screen.transactions.TransactionsScreen
 import com.spendly.financetracker.ui.viewmodel.AppTab
 import com.spendly.financetracker.ui.viewmodel.FinanceUiState
+import com.spendly.financetracker.ui.viewmodel.GoalDraft
 
 typealias OnSignOut = () -> Unit
 
 private enum class AppFlow {
     ADD_TRANSACTION,
+    ADD_GOAL,
     GOAL_DETAIL
 }
 
@@ -40,7 +42,7 @@ fun MainAppScreen(
     contentPadding: PaddingValues,
     onTabSelected: OnTabSelected,
     onTransactionTabSelected: OnTransactionTabSelected,
-    onAddGoal: OnAddGoal,
+    onAddGoal: (GoalDraft) -> String?,
     onSignOut: OnSignOut,
     onTitleChange: (String) -> Unit,
     onAmountChange: (String) -> Unit,
@@ -49,6 +51,7 @@ fun MainAppScreen(
     onAddTransaction: () -> Unit
 ) {
     var activeFlow by rememberSaveable { mutableStateOf<AppFlow?>(null) }
+    var selectedGoalId by rememberSaveable { mutableStateOf<String?>(null) }
     var closeAfterSave by rememberSaveable { mutableStateOf(false) }
     var observedSaveWork by rememberSaveable { mutableStateOf(false) }
 
@@ -57,6 +60,18 @@ fun MainAppScreen(
         closeAfterSave = false
         observedSaveWork = false
         activeFlow = AppFlow.ADD_TRANSACTION
+    }
+
+    fun openGoalDetail(goalId: String) {
+        selectedGoalId = goalId
+        activeFlow = AppFlow.GOAL_DETAIL
+    }
+
+    fun saveGoalAndReturnToList(draft: GoalDraft): Boolean {
+        if (onAddGoal(draft) == null) return false
+        selectedGoalId = null
+        activeFlow = null
+        return true
     }
 
     LaunchedEffect(activeFlow, state.isBusy, state.transactionTitle, state.transactionAmount) {
@@ -107,9 +122,17 @@ fun MainAppScreen(
                         onAddTransaction()
                     }
                 )
-                AppFlow.GOAL_DETAIL -> PrimaryGoalDetailScreen(
+                AppFlow.ADD_GOAL -> AddGoalScreen(
+                    onBack = { activeFlow = null },
+                    onSave = { draft -> saveGoalAndReturnToList(draft) }
+                )
+                AppFlow.GOAL_DETAIL -> GoalDetailScreen(
                     state = state,
-                    onBack = { activeFlow = null }
+                    goalId = selectedGoalId,
+                    onBack = {
+                        activeFlow = null
+                        selectedGoalId = null
+                    }
                 )
                 null -> {
                     when (state.currentTab) {
@@ -117,7 +140,9 @@ fun MainAppScreen(
                             state = state,
                             onOpenProfile = { onTabSelected(AppTab.PROFILE) },
                             onOpenTransactions = { onTabSelected(AppTab.TRANSACTIONS) },
-                            onOpenGoal = { activeFlow = AppFlow.GOAL_DETAIL },
+                            onOpenGoal = {
+                                state.primaryGoal?.let { goal -> openGoalDetail(goal.id) }
+                            },
                             onAddExpense = { openAddTransaction(TransactionType.EXPENSE) }
                         )
                         AppTab.TRANSACTIONS -> TransactionsScreen(
@@ -128,8 +153,8 @@ fun MainAppScreen(
                         )
                         AppTab.GOALS -> GoalsScreen(
                             state = state,
-                            onAddGoal = onAddGoal,
-                            onGoalSelected = { activeFlow = AppFlow.GOAL_DETAIL }
+                            onAddGoal = { activeFlow = AppFlow.ADD_GOAL },
+                            onGoalSelected = { goalId -> openGoalDetail(goalId) }
                         )
                         AppTab.ANALYTICS -> AnalyticsScreen(state = state)
                         AppTab.PROFILE -> ProfileScreen(

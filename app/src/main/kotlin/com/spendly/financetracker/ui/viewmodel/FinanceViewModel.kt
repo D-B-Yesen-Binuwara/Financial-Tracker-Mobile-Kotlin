@@ -106,21 +106,54 @@ class FinanceViewModel(
         _uiState.update { it.copy(transactionTab = tab) }
     }
 
-    fun addGoal() {
-        _uiState.update {
-            val nextIndex = it.goals.size + 1
-            val newGoal = Goal(
-                id = "goal-$nextIndex",
-                title = "New Goal $nextIndex",
-                targetCents = 120_000_00L,
-                savedCents = 18_000_00L,
-                dueDate = "Dec 2026",
-                category = "Custom",
-                isPrimary = false
-            )
+    fun addGoal(draft: GoalDraft): String? {
+        val title = draft.title.trim()
+        val status = draft.status.trim().ifBlank { "Not Started" }
+        val dueDate = draft.targetDate.trim()
+        val targetCents = parseAmountCents(draft.targetAmount)
+        val savedCents = if (draft.initialSaved.isBlank()) {
+            0L
+        } else {
+            parseAmountCents(draft.initialSaved)
+        }
 
+        if (title.isBlank()) {
+            _uiState.update { it.copy(message = "Enter a goal name.") }
+            return null
+        }
+
+        if (targetCents == null || targetCents <= 0L) {
+            _uiState.update { it.copy(message = "Enter a positive target amount.") }
+            return null
+        }
+
+        if (dueDate.isBlank()) {
+            _uiState.update { it.copy(message = "Enter a target date.") }
+            return null
+        }
+
+        if (savedCents == null || savedCents < 0L) {
+            _uiState.update { it.copy(message = "Enter a valid initial saved amount.") }
+            return null
+        }
+
+        val nextIndex = _uiState.value.goals.size + 1
+        val newGoal = Goal(
+            id = "goal-$nextIndex",
+            title = title,
+            targetCents = targetCents,
+            savedCents = savedCents,
+            dueDate = dueDate,
+            category = "Custom",
+            status = status,
+            isPrimary = false
+        )
+
+        _uiState.update {
             it.copy(goals = it.goals + newGoal, message = "Added a new goal")
         }
+
+        return newGoal.id
     }
 
     fun signOut() {

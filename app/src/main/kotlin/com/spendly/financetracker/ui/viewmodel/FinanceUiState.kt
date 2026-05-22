@@ -30,6 +30,7 @@ data class Goal(
     val savedCents: Long,
     val dueDate: String,
     val category: String,
+    val status: String = "On Track",
     val isPrimary: Boolean = false
 ) {
     val progressPercent: Int
@@ -38,6 +39,14 @@ data class Goal(
     val remainingCents: Long
         get() = (targetCents - savedCents).coerceAtLeast(0L)
 }
+
+data class GoalDraft(
+    val title: String,
+    val status: String,
+    val targetAmount: String,
+    val targetDate: String,
+    val initialSaved: String
+)
 
 private fun defaultGoals() = listOf(
     Goal(
