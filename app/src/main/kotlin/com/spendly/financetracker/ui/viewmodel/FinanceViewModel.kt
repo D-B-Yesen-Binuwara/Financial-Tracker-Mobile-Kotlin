@@ -191,6 +191,20 @@ class FinanceViewModel(
         }
     }
 
+    fun deleteTransaction(transactionId: String) {
+        val session = _uiState.value.session ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBusy = true, message = null) }
+            val result = transactionRepository.deleteTransaction(session.uid, transactionId)
+            _uiState.update {
+                it.copy(
+                    isBusy = false,
+                    message = if (result.isSuccess) "Transaction deleted." else result.exceptionOrNull()?.userMessage()
+                )
+            }
+        }
+    }
+
     fun clearMessage() {
         _uiState.update { it.copy(message = null) }
     }

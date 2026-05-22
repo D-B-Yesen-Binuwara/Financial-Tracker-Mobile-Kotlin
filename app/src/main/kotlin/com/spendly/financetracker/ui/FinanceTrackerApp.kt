@@ -56,7 +56,8 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
                 onAmountChange = viewModel::updateTransactionAmount,
                 onNoteChange = viewModel::updateTransactionNote,
                 onTypeChange = viewModel::selectTransactionType,
-                onAddTransaction = viewModel::addTransaction
+                onAddTransaction = viewModel::addTransaction,
+                onDeleteTransaction = viewModel::deleteTransaction
             )
         }
     }
