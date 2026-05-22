@@ -19,6 +19,7 @@ import com.spendly.financetracker.ui.screen.analytics.AnalyticsScreen
 import com.spendly.financetracker.ui.screen.goals.AddGoalScreen
 import com.spendly.financetracker.ui.screen.goals.GoalDetailScreen
 import com.spendly.financetracker.ui.screen.goals.GoalsScreen
+import com.spendly.financetracker.ui.screen.goals.EditGoalScreen
 import com.spendly.financetracker.ui.screen.home.HomeScreen
 import com.spendly.financetracker.ui.screen.profile.ProfileScreen
 import com.spendly.financetracker.ui.screen.transactions.AddTransactionScreen
@@ -33,7 +34,8 @@ typealias OnSignOut = () -> Unit
 private enum class AppFlow {
     ADD_TRANSACTION,
     ADD_GOAL,
-    GOAL_DETAIL
+    GOAL_DETAIL,
+    EDIT_GOAL
 }
 
 @Composable
@@ -43,6 +45,9 @@ fun MainAppScreen(
     onTabSelected: OnTabSelected,
     onTransactionTabSelected: OnTransactionTabSelected,
     onAddGoal: (GoalDraft) -> String?,
+    onAddGoalSavings: (String, String) -> Boolean,
+    onUpdateGoal: (String, GoalDraft) -> Boolean,
+    onDeleteGoal: (String) -> Unit,
     onSignOut: OnSignOut,
     onTitleChange: (String) -> Unit,
     onAmountChange: (String) -> Unit,
@@ -65,6 +70,11 @@ fun MainAppScreen(
     fun openGoalDetail(goalId: String) {
         selectedGoalId = goalId
         activeFlow = AppFlow.GOAL_DETAIL
+    }
+
+    fun openEditGoal(goalId: String) {
+        selectedGoalId = goalId
+        activeFlow = AppFlow.EDIT_GOAL
     }
 
     fun saveGoalAndReturnToList(draft: GoalDraft): Boolean {
@@ -129,11 +139,39 @@ fun MainAppScreen(
                 AppFlow.GOAL_DETAIL -> GoalDetailScreen(
                     state = state,
                     goalId = selectedGoalId,
+                    onAddSavings = onAddGoalSavings,
+                    onEdit = { goalId -> openEditGoal(goalId) },
                     onBack = {
                         activeFlow = null
                         selectedGoalId = null
                     }
                 )
+                AppFlow.EDIT_GOAL -> {
+                    val goal = state.goals.firstOrNull { it.id == selectedGoalId }
+                    if (goal != null) {
+                        EditGoalScreen(
+                            onBack = {
+                                activeFlow = null
+                                selectedGoalId = null
+                            },
+                            goal = goal,
+                            onSave = { id, draft ->
+                                val ok = onUpdateGoal(id, draft)
+                                if (ok) {
+                                    activeFlow = null
+                                    selectedGoalId = null
+                                }
+                                ok
+                            },
+                            onDelete = { id ->
+                                onDeleteGoal(id)
+                                activeFlow = null
+                                selectedGoalId = null
+                                true
+                            }
+                        )
+                    }
+                }
                 null -> {
                     when (state.currentTab) {
                         AppTab.HOME -> HomeScreen(

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class FinanceViewModel(
     private val authRepository: AuthRepository,
@@ -137,9 +138,9 @@ class FinanceViewModel(
             return null
         }
 
-        val nextIndex = _uiState.value.goals.size + 1
+        val newGoalId = "custom-goal-${UUID.randomUUID()}"
         val newGoal = Goal(
-            id = "goal-$nextIndex",
+            id = newGoalId,
             title = title,
             targetCents = targetCents,
             savedCents = savedCents,
@@ -154,6 +155,95 @@ class FinanceViewModel(
         }
 
         return newGoal.id
+    }
+
+    fun updateGoal(goalId: String, draft: GoalDraft): Boolean {
+        val title = draft.title.trim()
+        val status = draft.status.trim().ifBlank { "Not Started" }
+        val dueDate = draft.targetDate.trim()
+        val targetCents = parseAmountCents(draft.targetAmount)
+
+        if (title.isBlank()) {
+            _uiState.update { it.copy(message = "Enter a goal name.") }
+            return false
+        }
+
+        if (targetCents == null || targetCents <= 0L) {
+            _uiState.update { it.copy(message = "Enter a positive target amount.") }
+            return false
+        }
+
+        if (dueDate.isBlank()) {
+            _uiState.update { it.copy(message = "Enter a target date.") }
+            return false
+        }
+
+        if (_uiState.value.goals.none { it.id == goalId }) {
+            _uiState.update { it.copy(message = "Goal not found.") }
+            return false
+        }
+
+        _uiState.update { state ->
+            val updatedGoals = state.goals.map { goal ->
+                if (goal.id == goalId) {
+                    goal.copy(
+                        title = title,
+                        targetCents = targetCents,
+                        dueDate = dueDate,
+                        status = status
+                    )
+                } else {
+                    goal
+                }
+            }
+
+            state.copy(goals = updatedGoals, message = "Goal updated.")
+        }
+
+        return true
+    }
+
+    fun deleteGoal(goalId: String) {
+        if (_uiState.value.goals.none { it.id == goalId }) {
+            _uiState.update { it.copy(message = "Goal not found.") }
+            return
+        }
+
+        _uiState.update { state ->
+            val updated = state.goals.filterNot { it.id == goalId }
+            state.copy(goals = updated, message = "Goal deleted.")
+        }
+    }
+
+    fun addGoalSavings(goalId: String, amountInput: String): Boolean {
+        val amountCents = parseAmountCents(amountInput)
+
+        if (amountCents == null || amountCents <= 0L) {
+            _uiState.update { it.copy(message = "Enter a positive savings amount.") }
+            return false
+        }
+
+        if (_uiState.value.goals.none { it.id == goalId }) {
+            _uiState.update { it.copy(message = "Goal not found.") }
+            return false
+        }
+
+        _uiState.update { state ->
+            val updatedGoals = state.goals.map { goal ->
+                if (goal.id == goalId) {
+                    goal.copy(savedCents = goal.savedCents + amountCents)
+                } else {
+                    goal
+                }
+            }
+
+            state.copy(
+                goals = updatedGoals,
+                message = "Savings added."
+            )
+        }
+
+        return true
     }
 
     fun signOut() {
