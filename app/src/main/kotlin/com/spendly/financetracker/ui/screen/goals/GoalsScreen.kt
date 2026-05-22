@@ -12,11 +12,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -25,15 +27,14 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Laptop
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -73,28 +74,28 @@ fun GoalsScreen(
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Goal Tracker", fontWeight = FontWeight.Bold) })
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddGoal,
+                modifier = Modifier
+                    .size(56.dp)
+                    .offset(y = 8.dp),
+                shape = CircleShape,
+                containerColor = SpendlyGreen,
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add new goal")
+            }
         }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 104.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                OutlinedButton(
-                    onClick = onAddGoal,
-                    modifier = Modifier.fillMaxWidth(),
-                    border = BorderStroke(1.dp, SpendlyGreen),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SpendlyGreen)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Add New Goal")
-                }
-            }
-
             if (state.goals.isEmpty()) {
                 item {
                     NoGoalState(onSetGoal = onAddGoal)
@@ -132,8 +133,6 @@ fun GoalsScreen(
                     }
                 }
             }
-
-            item { Spacer(Modifier.height(80.dp)) }
         }
     }
 }
