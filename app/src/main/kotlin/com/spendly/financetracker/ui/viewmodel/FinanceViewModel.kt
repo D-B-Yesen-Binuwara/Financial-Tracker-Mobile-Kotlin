@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 
 class FinanceViewModel(
     private val authRepository: AuthRepository,
-    private val transactionRepository: TransactionRepository
+    val transactionRepository: TransactionRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(FinanceUiState())
     val uiState: StateFlow<FinanceUiState> = _uiState.asStateFlow()
