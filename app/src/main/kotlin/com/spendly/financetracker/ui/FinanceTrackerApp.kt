@@ -27,6 +27,7 @@ import com.spendly.financetracker.ui.components.AppBottomNavigation
 import com.spendly.financetracker.ui.navigation.Screen
 import com.spendly.financetracker.ui.navigation.bottomNavRoutes
 import com.spendly.financetracker.ui.screen.AuthScreen
+import com.spendly.financetracker.ui.screen.CreateAccountScreen
 import com.spendly.financetracker.ui.screen.FirebaseSetupScreen
 import com.spendly.financetracker.ui.screen.analytics.AnalyticsScreen
 import com.spendly.financetracker.ui.screen.goals.GoalsScreen
@@ -56,16 +57,34 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
         state.isLoading -> Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
             LoadingScreen(padding)
         }
-        state.session == null -> Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
-            AuthScreen(
-                state = state,
-                contentPadding = padding,
-                onEmailChange = viewModel::updateEmail,
-                onPasswordChange = viewModel::updatePassword,
-                onSubmit = viewModel::submitAuth,
-                onToggleMode = viewModel::toggleAuthMode,
-                onCreateAccount = viewModel::toggleAuthMode
-            )
+        state.session == null -> {
+            val authNavController = rememberNavController()
+            Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+                NavHost(
+                    navController = authNavController,
+                    startDestination = Screen.Auth.route
+                ) {
+                    composable(Screen.Auth.route) {
+                        AuthScreen(
+                            state = state,
+                            contentPadding = padding,
+                            onEmailChange = viewModel::updateEmail,
+                            onPasswordChange = viewModel::updatePassword,
+                            onSubmit = viewModel::submitAuth,
+                            onToggleMode = viewModel::toggleAuthMode,
+                            onCreateAccount = { authNavController.navigate(Screen.CreateAccount.route) }
+                        )
+                    }
+
+                    composable(Screen.CreateAccount.route) {
+                        CreateAccountScreen(
+                            authRepository = viewModel.authRepository,
+                            contentPadding = padding,
+                            onBack = { authNavController.popBackStack() }
+                        )
+                    }
+                }
+            }
         }
         else -> {
             val session = state.session!!

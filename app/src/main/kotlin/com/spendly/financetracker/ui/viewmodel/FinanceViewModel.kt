@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class FinanceViewModel(
-    private val authRepository: AuthRepository,
+    val authRepository: AuthRepository,
     val transactionRepository: TransactionRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(FinanceUiState())

@@ -20,6 +20,8 @@ sealed class Screen(val route: String) {
         const val routeWithArgs = "add_expense?$ARG_ID={$ARG_ID}"
         fun editRoute(id: String) = "add_expense?$ARG_ID=$id"
     }
+
+    object CreateAccount : Screen("create_account")
 }
 
 val bottomNavRoutes = setOf(
