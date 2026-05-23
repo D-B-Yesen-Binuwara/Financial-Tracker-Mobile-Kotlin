@@ -15,13 +15,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+<<<<<<< HEAD
+=======
 import androidx.hilt.navigation.compose.hiltViewModel
+>>>>>>> ac0fe88fd91016dab6928ddce7fdf4abc6a2f78b
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+<<<<<<< HEAD
+import com.spendly.financetracker.data.repository.AuthRepository
+import com.spendly.financetracker.data.repository.TransactionRepository
+=======
+>>>>>>> ac0fe88fd91016dab6928ddce7fdf4abc6a2f78b
 import com.spendly.financetracker.ui.components.AppBottomNavigation
 import com.spendly.financetracker.ui.navigation.Screen
 import com.spendly.financetracker.ui.navigation.bottomNavRoutes
@@ -30,9 +38,12 @@ import com.spendly.financetracker.ui.screen.CreateAccountScreen
 import com.spendly.financetracker.ui.screen.FirebaseSetupScreen
 import com.spendly.financetracker.ui.screen.analytics.AnalyticsScreen
 import com.spendly.financetracker.ui.screen.goals.GoalsScreen
+<<<<<<< HEAD
+=======
 import com.spendly.financetracker.ui.screen.goals.AddGoalScreen
 import com.spendly.financetracker.ui.screen.goals.EditGoalScreen
 import com.spendly.financetracker.ui.screen.goals.GoalDetailScreen
+>>>>>>> ac0fe88fd91016dab6928ddce7fdf4abc6a2f78b
 import com.spendly.financetracker.ui.screen.home.HomeScreen
 import com.spendly.financetracker.ui.screen.profile.ProfileScreen
 import com.spendly.financetracker.ui.screen.transactions.AddExpenseScreen

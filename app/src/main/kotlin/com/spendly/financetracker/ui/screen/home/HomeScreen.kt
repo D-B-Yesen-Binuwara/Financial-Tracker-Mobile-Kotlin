@@ -63,8 +63,7 @@ fun HomeScreen(
     onOpenProfile: () -> Unit,
     onOpenTransactions: () -> Unit,
     onOpenGoal: () -> Unit,
-    onAddExpense: () -> Unit,
-    onDeleteTransaction: (String) -> Unit
+    onAddExpense: () -> Unit
 ) {
     val recentTransactions = state.transactions
         .sortedByDescending { it.createdAtMillis }
@@ -255,8 +254,7 @@ fun HomeScreen(
                                 recentTransactions.forEachIndexed { index, transaction ->
                                     TransactionListItem(
                                         transaction = transaction,
-                                        showContainer = false,
-                                        onDelete = { onDeleteTransaction(transaction.id) }
+                                        showContainer = false
                                     )
                                     if (index < recentTransactions.lastIndex) {
                                         HorizontalDivider(thickness = 0.5.dp, color = SpendlyGray100)

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,19 +14,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -36,6 +31,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,21 +46,30 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.spendly.financetracker.data.repository.AuthRepository
 import com.spendly.financetracker.ui.theme.SpendlyGreen
 import com.spendly.financetracker.ui.theme.SpendlyGreenLight
-import com.spendly.financetracker.ui.viewmodel.FinanceUiState
+import com.spendly.financetracker.ui.viewmodel.CreateAccountViewModel
 
 @Composable
-fun AuthScreen(
-    state: FinanceUiState,
-    contentPadding: PaddingValues,
-    onEmailChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onSubmit: () -> Unit,
-    onToggleMode: () -> Unit,
-    onCreateAccount: () -> Unit
+fun CreateAccountScreen(
+    authRepository: AuthRepository,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    onBack: () -> Unit
 ) {
+    val viewModel: CreateAccountViewModel = viewModel(
+        factory = CreateAccountViewModel.Factory(authRepository)
+    )
+    val state by viewModel.uiState.collectAsState()
+
     var passwordVisible by remember { mutableStateOf(false) }
+    var confirmVisible by remember { mutableStateOf(false) }
+
+    // Navigate back (to sign-in) once account is created — Firebase session observer will sign in automatically
+    LaunchedEffect(state.isSuccess) {
+        if (state.isSuccess) onBack()
+    }
 
     Column(
         modifier = Modifier
@@ -74,13 +80,13 @@ fun AuthScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Column(
             modifier = Modifier
                 .widthIn(max = 460.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -97,27 +103,33 @@ fun AuthScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             Text(
-                text = "Welcome back",
+                "Create account",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Sign in to Spendly",
+                "Start your financial journey",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+
+            OutlinedTextField(
+                value = state.name,
+                onValueChange = viewModel::onNameChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Name") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+            )
 
             OutlinedTextField(
                 value = state.email,
-                onValueChange = onEmailChange,
+                onValueChange = viewModel::onEmailChange,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Email address") },
-                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                label = { Text("Email") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
@@ -127,10 +139,9 @@ fun AuthScreen(
 
             OutlinedTextField(
                 value = state.password,
-                onValueChange = onPasswordChange,
+                onValueChange = viewModel::onPasswordChange,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Password") },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -143,26 +154,55 @@ fun AuthScreen(
                 },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(onDone = { onSubmit() })
+                    imeAction = ImeAction.Next
+                )
             )
+
+            OutlinedTextField(
+                value = state.confirmPassword,
+                onValueChange = viewModel::onConfirmPasswordChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Confirm password") },
+                singleLine = true,
+                visualTransformation = if (confirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { confirmVisible = !confirmVisible }) {
+                        Icon(
+                            imageVector = if (confirmVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = null
+                        )
+                    }
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Next
+                )
+            )
+
+            OutlinedTextField(
+                value = state.currency,
+                onValueChange = viewModel::onCurrencyChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Currency (optional)") },
+                placeholder = { Text("e.g. LKR, USD") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+            )
+
+            if (state.error != null) {
+                Text(
+                    state.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
 
             if (state.isBusy) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
-            Text(
-                text = "Forgot password?",
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(vertical = 4.dp),
-                color = SpendlyGreen,
-                style = MaterialTheme.typography.labelMedium
-            )
-
             Button(
-                onClick = onSubmit,
+                onClick = viewModel::submit,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isBusy,
                 colors = ButtonDefaults.buttonColors(containerColor = SpendlyGreen)
@@ -174,30 +214,16 @@ fun AuthScreen(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("Sign in")
+                    Text("Submit")
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f))
-                Text(
-                    text = "or",
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                HorizontalDivider(modifier = Modifier.weight(1f))
-            }
-
             OutlinedButton(
-                onClick = onCreateAccount,
-                enabled = !state.isBusy,
-                modifier = Modifier.fillMaxWidth()
+                onClick = onBack,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isBusy
             ) {
-                Text("Create an account")
+                Text("Already have an account? Sign in")
             }
         }
     }
