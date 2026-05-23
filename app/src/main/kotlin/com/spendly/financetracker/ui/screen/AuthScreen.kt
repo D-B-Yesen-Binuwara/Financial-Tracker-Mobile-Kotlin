@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -50,7 +51,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.spendly.financetracker.ui.theme.SpendlyGreen
 import com.spendly.financetracker.ui.theme.SpendlyGreenLight
-import com.spendly.financetracker.ui.viewmodel.AuthMode
 import com.spendly.financetracker.ui.viewmodel.FinanceUiState
 
 @Composable
@@ -60,9 +60,9 @@ fun AuthScreen(
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onSubmit: () -> Unit,
-    onToggleMode: () -> Unit
+    onToggleMode: () -> Unit,
+    onCreateAccount: () -> Unit
 ) {
-    val isCreateMode = state.authMode == AuthMode.CREATE_ACCOUNT
     var passwordVisible by remember { mutableStateOf(false) }
 
     Column(
@@ -74,7 +74,7 @@ fun AuthScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(if (isCreateMode) 24.dp else 40.dp))
+        Spacer(modifier = Modifier.height(40.dp))
 
         Column(
             modifier = Modifier
@@ -100,12 +100,12 @@ fun AuthScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = if (isCreateMode) "Create account" else "Welcome back",
+                text = "Welcome back",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                fontWeight = FontWeight.Bold
             )
             Text(
-                text = if (isCreateMode) "Start your financial journey" else "Sign in to Spendly",
+                text = "Sign in to Spendly",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -145,25 +145,21 @@ fun AuthScreen(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
                 ),
-                keyboardActions = KeyboardActions(
-                    onDone = { onSubmit() }
-                )
+                keyboardActions = KeyboardActions(onDone = { onSubmit() })
             )
 
             if (state.isBusy) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
-            if (!isCreateMode) {
-                Text(
-                    text = "Forgot password?",
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(vertical = 4.dp),
-                    color = SpendlyGreen,
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
+            Text(
+                text = "Forgot password?",
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(vertical = 4.dp),
+                color = SpendlyGreen,
+                style = MaterialTheme.typography.labelMedium
+            )
 
             Button(
                 onClick = onSubmit,
@@ -178,32 +174,30 @@ fun AuthScreen(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text(if (isCreateMode) "Create account" else "Sign in")
+                    Text("Sign in")
                 }
             }
 
-            if (!isCreateMode) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    HorizontalDivider(modifier = Modifier.weight(1f))
-                    Text(
-                        text = "or",
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    HorizontalDivider(modifier = Modifier.weight(1f))
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(modifier = Modifier.weight(1f))
+                Text(
+                    text = "or",
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                HorizontalDivider(modifier = Modifier.weight(1f))
             }
 
             OutlinedButton(
-                onClick = onToggleMode,
+                onClick = onCreateAccount,
                 enabled = !state.isBusy,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (isCreateMode) "Already have an account? Sign in" else "Create an account")
+                Text("Create an account")
             }
         }
     }
