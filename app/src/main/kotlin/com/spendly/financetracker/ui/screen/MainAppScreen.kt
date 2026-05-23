@@ -53,7 +53,8 @@ fun MainAppScreen(
     onAmountChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
     onTypeChange: (TransactionType) -> Unit,
-    onAddTransaction: () -> Unit
+    onAddTransaction: () -> Unit,
+    onDeleteTransaction: (String) -> Unit
 ) {
     var activeFlow by rememberSaveable { mutableStateOf<AppFlow?>(null) }
     var selectedGoalId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -112,7 +113,7 @@ fun MainAppScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(contentPadding)
+                //.padding(contentPadding)
         ) {
             when (activeFlow) {
                 AppFlow.ADD_TRANSACTION -> AddTransactionScreen(
@@ -187,7 +188,8 @@ fun MainAppScreen(
                             state = state,
                             onTransactionTabSelected = onTransactionTabSelected,
                             onAddExpense = { openAddTransaction(TransactionType.EXPENSE) },
-                            onAddIncome = { openAddTransaction(TransactionType.INCOME) }
+                            onAddIncome = { openAddTransaction(TransactionType.INCOME) },
+                            onDeleteTransaction = onDeleteTransaction
                         )
                         AppTab.GOALS -> GoalsScreen(
                             state = state,
