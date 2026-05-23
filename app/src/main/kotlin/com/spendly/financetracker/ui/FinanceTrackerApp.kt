@@ -15,14 +15,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+<<<<<<< HEAD
+=======
+import androidx.hilt.navigation.compose.hiltViewModel
+>>>>>>> ac0fe88fd91016dab6928ddce7fdf4abc6a2f78b
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+<<<<<<< HEAD
 import com.spendly.financetracker.data.repository.AuthRepository
 import com.spendly.financetracker.data.repository.TransactionRepository
+=======
+>>>>>>> ac0fe88fd91016dab6928ddce7fdf4abc6a2f78b
 import com.spendly.financetracker.ui.components.AppBottomNavigation
 import com.spendly.financetracker.ui.navigation.Screen
 import com.spendly.financetracker.ui.navigation.bottomNavRoutes
@@ -31,6 +38,12 @@ import com.spendly.financetracker.ui.screen.CreateAccountScreen
 import com.spendly.financetracker.ui.screen.FirebaseSetupScreen
 import com.spendly.financetracker.ui.screen.analytics.AnalyticsScreen
 import com.spendly.financetracker.ui.screen.goals.GoalsScreen
+<<<<<<< HEAD
+=======
+import com.spendly.financetracker.ui.screen.goals.AddGoalScreen
+import com.spendly.financetracker.ui.screen.goals.EditGoalScreen
+import com.spendly.financetracker.ui.screen.goals.GoalDetailScreen
+>>>>>>> ac0fe88fd91016dab6928ddce7fdf4abc6a2f78b
 import com.spendly.financetracker.ui.screen.home.HomeScreen
 import com.spendly.financetracker.ui.screen.profile.ProfileScreen
 import com.spendly.financetracker.ui.screen.transactions.AddExpenseScreen
@@ -38,6 +51,7 @@ import com.spendly.financetracker.ui.screen.transactions.AddIncomeScreen
 import com.spendly.financetracker.ui.screen.transactions.TransactionsScreen
 import com.spendly.financetracker.ui.viewmodel.AppTab
 import com.spendly.financetracker.ui.viewmodel.FinanceViewModel
+import com.spendly.financetracker.ui.viewmodel.GoalsViewModel
 
 @Composable
 fun FinanceTrackerApp(viewModel: FinanceViewModel) {
@@ -78,7 +92,6 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
 
                     composable(Screen.CreateAccount.route) {
                         CreateAccountScreen(
-                            authRepository = viewModel.authRepository,
                             contentPadding = padding,
                             onBack = { authNavController.popBackStack() }
                         )
@@ -87,7 +100,6 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
             }
         }
         else -> {
-            val session = state.session!!
             val navController = rememberNavController()
             val currentBackStack by navController.currentBackStackEntryAsState()
             val currentRoute = currentBackStack?.destination?.route
@@ -136,17 +148,17 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
                             state = state,
                             onOpenProfile = { navController.navigate(Screen.Profile.route) },
                             onOpenTransactions = { navController.navigate(Screen.Events.route) },
-                            onOpenGoal = { navController.navigate(Screen.Goals.route) },
-                            onAddExpense = { navController.navigate(Screen.AddExpense.route) }
+                            onOpenGoal = {
+                                state.primaryGoal?.let { navController.navigate(Screen.GoalDetails.detailRoute(it.id)) }
+                                    ?: navController.navigate(Screen.Goals.route)
+                            },
+                            onAddExpense = { navController.navigate(Screen.AddExpense.route) },
+                            onDeleteTransaction = viewModel::deleteTransaction
                         )
                     }
 
                     composable(Screen.Events.route) {
-                        TransactionsScreen(
-                            navController = navController,
-                            transactionRepository = viewModel.transactionRepository,
-                            userId = session.uid
-                        )
+                        TransactionsScreen(navController = navController)
                     }
 
                     composable(Screen.Analytics.route) {
@@ -156,9 +168,66 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
                     composable(Screen.Goals.route) {
                         GoalsScreen(
                             state = state,
-                            onAddGoal = viewModel::addGoal,
-                            onGoalSelected = {}
+                            onAddGoal = { navController.navigate(Screen.AddGoal.route) },
+                            onGoalSelected = { goalId -> navController.navigate(Screen.GoalDetails.detailRoute(goalId)) }
                         )
+                    }
+
+                    composable(Screen.AddGoal.route) {
+                        val goalsViewModel: GoalsViewModel = hiltViewModel()
+                        AddGoalScreen(
+                            onBack = { navController.popBackStack() },
+                            onSave = { draft ->
+                                val accepted = goalsViewModel.saveDraft(draft)
+                                if (accepted) navController.popBackStack()
+                                accepted
+                            }
+                        )
+                    }
+
+                    composable(
+                        route = Screen.GoalDetails.routeWithArgs,
+                        arguments = listOf(navArgument(Screen.GoalDetails.ARG_ID) {
+                            type = NavType.StringType; nullable = true; defaultValue = null
+                        })
+                    ) { entry ->
+                        val goalsViewModel: GoalsViewModel = hiltViewModel()
+                        GoalDetailScreen(
+                            state = state,
+                            goalId = entry.arguments?.getString(Screen.GoalDetails.ARG_ID),
+                            onAddSavings = goalsViewModel::addSavings,
+                            onEdit = { goalId -> navController.navigate(Screen.EditGoal.editRoute(goalId)) },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable(
+                        route = Screen.EditGoal.routeWithArgs,
+                        arguments = listOf(navArgument(Screen.EditGoal.ARG_ID) {
+                            type = NavType.StringType; nullable = true; defaultValue = null
+                        })
+                    ) { entry ->
+                        val goalsViewModel: GoalsViewModel = hiltViewModel()
+                        val goalId = entry.arguments?.getString(Screen.EditGoal.ARG_ID)
+                        val goal = state.goals.firstOrNull { it.id == goalId }
+                        if (goal != null) {
+                            EditGoalScreen(
+                                onBack = { navController.popBackStack() },
+                                goal = goal,
+                                onSave = { _, draft ->
+                                    val accepted = goalsViewModel.saveDraft(draft, goal)
+                                    if (accepted) navController.popBackStack()
+                                    accepted
+                                },
+                                onDelete = { id ->
+                                    val accepted = goalsViewModel.deleteGoal(id)
+                                    if (accepted) navController.popBackStack(Screen.Goals.route, false)
+                                    accepted
+                                }
+                            )
+                        } else {
+                            LoadingScreen(PaddingValues())
+                        }
                     }
 
                     composable(Screen.Profile.route) {
@@ -177,8 +246,6 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
                         })
                     ) {
                         AddIncomeScreen(
-                            transactionRepository = viewModel.transactionRepository,
-                            userId = session.uid,
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -190,8 +257,6 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
                         })
                     ) {
                         AddExpenseScreen(
-                            transactionRepository = viewModel.transactionRepository,
-                            userId = session.uid,
                             onBack = { navController.popBackStack() }
                         )
                     }

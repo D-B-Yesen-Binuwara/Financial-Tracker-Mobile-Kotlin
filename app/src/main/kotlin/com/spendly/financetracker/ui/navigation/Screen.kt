@@ -7,6 +7,17 @@ sealed class Screen(val route: String) {
     object Events : Screen("events")
     object Analytics : Screen("analytics")
     object Goals : Screen("goals")
+    object AddGoal : Screen("add_goal")
+    object GoalDetails : Screen("goal_detail") {
+        const val ARG_ID = "goalId"
+        const val routeWithArgs = "goal_detail?$ARG_ID={$ARG_ID}"
+        fun detailRoute(id: String) = "goal_detail?$ARG_ID=$id"
+    }
+    object EditGoal : Screen("edit_goal") {
+        const val ARG_ID = "goalId"
+        const val routeWithArgs = "edit_goal?$ARG_ID={$ARG_ID}"
+        fun editRoute(id: String) = "edit_goal?$ARG_ID=$id"
+    }
     object Profile : Screen("profile")
 
     object AddIncome : Screen("add_income") {
