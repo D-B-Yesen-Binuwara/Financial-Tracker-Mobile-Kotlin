@@ -97,7 +97,7 @@ typealias OnAddSavings = (String, String) -> Boolean
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GoalsScreen(
+internal fun GoalsScreenContent(
     state: FinanceUiState,
     onAddGoal: OnAddGoal,
     onGoalSelected: OnGoalSelected
@@ -172,7 +172,7 @@ fun GoalsScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditGoalScreen(
+internal fun EditGoalScreenContent(
     onBack: () -> Unit,
     goal: Goal,
     onSave: OnUpdateGoal,
@@ -361,7 +361,7 @@ fun EditGoalScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddGoalScreen(
+internal fun AddGoalScreenContent(
     onBack: () -> Unit,
     onSave: OnSaveGoal
 ) {
@@ -763,7 +763,7 @@ private fun OtherGoalRow(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GoalDetailScreen(
+internal fun GoalDetailScreenContent(
     state: FinanceUiState,
     goalId: String?,
     onAddSavings: OnAddSavings,
@@ -1111,25 +1111,10 @@ private data class GoalMonthlySaving(
 
 private fun monthlySavingsData(goal: Goal): List<GoalMonthlySaving> {
     val monthLabels = lastFiveGoalMonthLabels()
-    if (goal.savedCents <= 0L) {
-        return monthLabels.map { label -> GoalMonthlySaving(label, 0L) }
-    }
-
-    val weights = listOf(12L, 44L, 14L, 76L, 100L)
-    val totalWeight = weights.sum()
-    var allocatedCents = 0L
-
     return monthLabels.mapIndexed { index, label ->
-        val amountCents = if (index == monthLabels.lastIndex) {
-            (goal.savedCents - allocatedCents).coerceAtLeast(0L)
-        } else {
-            (goal.savedCents * weights[index]) / totalWeight
-        }
-        allocatedCents += amountCents
-
         GoalMonthlySaving(
             month = label,
-            amountCents = amountCents
+            amountCents = if (index == monthLabels.lastIndex) goal.savedCents else 0L
         )
     }
 }

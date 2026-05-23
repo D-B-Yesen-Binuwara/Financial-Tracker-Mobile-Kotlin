@@ -182,14 +182,22 @@ fun EmptyState(
 }
 
 @Composable
-fun NoTransactionsState(onAddExpense: () -> Unit) {
+fun NoRecordsState(
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null
+) {
     EmptyState(
         icon = Icons.Default.Receipt,
-        title = "No transactions yet",
+        title = "No records yet",
         subtitle = "Start logging your income and expenses",
-        actionLabel = "Add expense",
-        onAction = onAddExpense
+        actionLabel = actionLabel,
+        onAction = onAction
     )
+}
+
+@Composable
+fun NoTransactionsState(onAddExpense: () -> Unit) {
+    NoRecordsState(actionLabel = "Add expense", onAction = onAddExpense)
 }
 
 @Composable
