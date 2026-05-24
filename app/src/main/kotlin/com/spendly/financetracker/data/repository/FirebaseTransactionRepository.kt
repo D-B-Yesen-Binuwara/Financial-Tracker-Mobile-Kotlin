@@ -1,98 +1,53 @@
 package com.spendly.financetracker.data.repository
 
-import android.content.Context
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
-import com.spendly.financetracker.data.firebase.FirebaseBootstrap
 import com.spendly.financetracker.data.model.FinanceTransaction
 import com.spendly.financetracker.data.model.TransactionDraft
 import com.spendly.financetracker.data.model.TransactionType
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.flow.combine
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class FirebaseTransactionRepository(context: Context) : TransactionRepository {
-    private val appContext = context.applicationContext
-
-    override fun observeTransactions(userId: String): Flow<List<FinanceTransaction>> = callbackFlow {
-        val firestore = firestoreOrNull()
-        if (firestore == null) {
-            close(IllegalStateException(FirebaseBootstrap.MISSING_CONFIG_MESSAGE))
-            return@callbackFlow
+@Singleton
+class FirebaseTransactionRepository @Inject constructor(
+    private val incomeRepository: IncomeRepository,
+    private val expenseRepository: ExpenseRepository
+) : TransactionRepository {
+    override fun observeTransactions(userId: String): Flow<List<FinanceTransaction>> =
+        combine(
+            incomeRepository.observeIncome(userId),
+            expenseRepository.observeExpenses(userId)
+        ) { income, expenses ->
+            (income + expenses).sortedByDescending { it.dateMillis }
         }
 
-        val listener = transactionsCollection(firestore, userId)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
+    override suspend fun getTransaction(id: String, type: TransactionType?): FinanceTransaction? =
+        when (type) {
+            TransactionType.INCOME -> incomeRepository.getIncome(id)
+            TransactionType.EXPENSE -> expenseRepository.getExpense(id)
+            null -> incomeRepository.getIncome(id) ?: expenseRepository.getExpense(id)
+        }
 
-                val transactions = snapshot
-                    ?.documents
-                    ?.mapNotNull { it.toFinanceTransaction() }
-                    .orEmpty()
+    override suspend fun addTransaction(userId: String, draft: TransactionDraft): Result<Unit> =
+        when (draft.type) {
+            TransactionType.INCOME -> incomeRepository.addIncome(userId, draft)
+            TransactionType.EXPENSE -> expenseRepository.addExpense(userId, draft)
+        }
 
-                trySend(transactions)
-            }
+    override suspend fun updateTransaction(id: String, draft: TransactionDraft): Result<Unit> =
+        when (draft.type) {
+            TransactionType.INCOME -> incomeRepository.updateIncome(id, draft)
+            TransactionType.EXPENSE -> expenseRepository.updateExpense(id, draft)
+        }
 
-        awaitClose { listener.remove() }
+    override suspend fun deleteTransaction(transaction: FinanceTransaction): Result<Unit> =
+        when (transaction.type) {
+            TransactionType.INCOME -> incomeRepository.deleteIncome(transaction.id)
+            TransactionType.EXPENSE -> expenseRepository.deleteExpense(transaction.id)
+        }
+
+    override suspend fun syncWithFirestore(userId: String) {
+        incomeRepository.syncWithFirestore(userId)
+        expenseRepository.syncWithFirestore(userId)
     }
-
-    override suspend fun addTransaction(
-        userId: String,
-        draft: TransactionDraft
-    ): Result<Unit> = runCatching {
-        val firestore = firestoreOrNull() ?: error(FirebaseBootstrap.MISSING_CONFIG_MESSAGE)
-
-        val data = mapOf(
-            "title" to draft.title,
-            "amountCents" to draft.amountCents,
-            "type" to draft.type.name,
-            "note" to draft.note,
-            "ownerId" to userId,
-            "createdAt" to FieldValue.serverTimestamp(),
-            "updatedAt" to FieldValue.serverTimestamp()
-        )
-
-        transactionsCollection(firestore, userId).add(data).await()
-    }.map { Unit }
-
-    override suspend fun deleteTransaction(userId: String, transactionId: String): Result<Unit> = runCatching {
-        val firestore = firestoreOrNull() ?: error(FirebaseBootstrap.MISSING_CONFIG_MESSAGE)
-        transactionsCollection(firestore, userId).document(transactionId).delete().await()
-    }.map { Unit }
-
-    private fun firestoreOrNull(): FirebaseFirestore? {
-        if (!FirebaseBootstrap.ensureInitialized(appContext)) return null
-        return runCatching { FirebaseFirestore.getInstance() }.getOrNull()
-    }
-
-    private fun transactionsCollection(firestore: FirebaseFirestore, userId: String) =
-        firestore
-            .collection("users")
-            .document(userId)
-            .collection("transactions")
-
-    private fun DocumentSnapshot.toFinanceTransaction(): FinanceTransaction? {
-        val title = getString("title")?.takeIf { it.isNotBlank() } ?: return null
-        val amountCents = getLong("amountCents") ?: return null
-        val type = getString("type")?.toTransactionTypeOrNull() ?: return null
-
-        return FinanceTransaction(
-            id = id,
-            title = title,
-            amountCents = amountCents,
-            type = type,
-            note = getString("note").orEmpty(),
-            createdAtMillis = getTimestamp("createdAt")?.toDate()?.time ?: 0L
-        )
-    }
-
-    private fun String.toTransactionTypeOrNull(): TransactionType? =
-        runCatching { TransactionType.valueOf(this) }.getOrNull()
 }
