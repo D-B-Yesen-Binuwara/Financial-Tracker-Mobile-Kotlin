@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class FirebaseAuthRepository(context: Context) : AuthRepository {
-    private val appContext = context.applicationContext
+    private val appContext = context.applicationContext //firebase auth repo
 
     override val isFirebaseConfigured: Boolean
         get() = FirebaseBootstrap.isConfigured(appContext)
