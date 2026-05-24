@@ -47,20 +47,17 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.spendly.financetracker.data.repository.AuthRepository
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.spendly.financetracker.ui.theme.SpendlyGreen
 import com.spendly.financetracker.ui.theme.SpendlyGreenLight
 import com.spendly.financetracker.ui.viewmodel.CreateAccountViewModel
 
 @Composable
 fun CreateAccountScreen(
-    authRepository: AuthRepository,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     onBack: () -> Unit
 ) {
-    val viewModel: CreateAccountViewModel = viewModel(
-        factory = CreateAccountViewModel.Factory(authRepository)
-    )
+    val viewModel: CreateAccountViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
 
     var passwordVisible by remember { mutableStateOf(false) }
