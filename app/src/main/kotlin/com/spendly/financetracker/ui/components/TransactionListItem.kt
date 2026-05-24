@@ -53,7 +53,8 @@ import com.spendly.financetracker.ui.util.formatMoney
 fun TransactionListItem(
     transaction: FinanceTransaction,
     modifier: Modifier = Modifier,
-    showContainer: Boolean = true
+    showContainer: Boolean = true,
+    onDelete: (() -> Unit)? = null
 ) {
     var expanded by remember(transaction.id) { mutableStateOf(false) }
     val amountPrefix = if (transaction.type == TransactionType.INCOME) "+" else "-"
@@ -65,7 +66,8 @@ fun TransactionListItem(
             expanded = expanded,
             onToggle = { expanded = !expanded },
             amountPrefix = amountPrefix,
-            amountColor = amountColor
+            amountColor = amountColor,
+            onDelete = onDelete
         )
     }
 
@@ -91,7 +93,8 @@ private fun TransactionItemContent(
     expanded: Boolean,
     onToggle: () -> Unit,
     amountPrefix: String,
-    amountColor: Color
+    amountColor: Color,
+    onDelete: (() -> Unit)?
 ) {
     Column(
         modifier = Modifier
@@ -133,7 +136,7 @@ private fun TransactionItemContent(
                         isIncome = transaction.type == TransactionType.INCOME
                     )
                     Text(
-                        text = formatDateShort(transaction.createdAtMillis),
+                        text = formatDateShort(transaction.dateMillis),
                         style = MaterialTheme.typography.labelSmall,
                         color = SpendlyGray500
                     )
@@ -176,7 +179,7 @@ private fun TransactionItemContent(
                 ) {
                     Icon(Icons.Default.CalendarToday, null, tint = SpendlyGray500, modifier = Modifier.size(14.dp))
                     Text(
-                        formatDateFull(transaction.createdAtMillis),
+                        formatDateFull(transaction.dateMillis),
                         style = MaterialTheme.typography.bodySmall,
                         color = SpendlyGray500
                     )
@@ -190,8 +193,8 @@ private fun TransactionItemContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
-                        onClick = {},
-                        enabled = false,
+                        onClick = { onDelete?.invoke() },
+                        enabled = onDelete != null,
                         modifier = Modifier.height(32.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = SpendlyGreen),

@@ -50,8 +50,8 @@ import com.spendly.financetracker.ui.viewmodel.FinanceUiState
 @Composable
 fun ProfileScreen(state: FinanceUiState, onSignOut: () -> Unit) {
     val email = state.session?.email.orEmpty()
-    val name = displayNameFromEmail(email)
-    val initials = initialsFromEmail(email)
+    val name = state.profile?.name?.takeIf { it.isNotBlank() } ?: displayNameFromEmail(email)
+    val initials = initialsFromEmail(name)
 
     Scaffold(
         topBar = {
@@ -107,7 +107,7 @@ fun ProfileScreen(state: FinanceUiState, onSignOut: () -> Unit) {
                 ProfileItem(
                     icon = Icons.Default.CurrencyExchange,
                     label = "Default Currency",
-                    value = "LKR"
+                    value = state.profile?.defaultCurrency ?: "LKR"
                 )
                 ProfileItem(
                     icon = Icons.Default.Settings,
