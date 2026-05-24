@@ -140,7 +140,7 @@ fun AnalyticsScreen(state: FinanceUiState) {
                 }
 
                 item {
-                    SpendingSplitCard(expenseCents = totalExpense)
+                    SpendingSplitCard(state = state)
                 }
 
                 item {
@@ -181,11 +181,10 @@ private fun SummaryTile(
 private fun SpendingByCategoryCard(state: FinanceUiState) {
     val categories = state.transactions
         .filter { it.type == TransactionType.EXPENSE }
-        .groupBy { it.note.ifBlank { "General" }.substringBefore(" ").take(18) }
+        .groupBy { it.category.ifBlank { "Other" }.take(18) }
         .mapValues { entry -> entry.value.sumOf { it.amountCents } }
         .toList()
         .sortedByDescending { it.second }
-        .ifEmpty { listOf("General" to 0L) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -251,8 +250,12 @@ private fun CategoryRing(categories: List<Pair<String, Long>>, total: Long) {
 }
 
 @Composable
-private fun SpendingSplitCard(expenseCents: Long) {
-    val committed = (expenseCents * 62) / 100
+private fun SpendingSplitCard(state: FinanceUiState) {
+    val expenseCents = state.expenseCents
+    val committedCategories = setOf("Rent", "Subscriptions")
+    val committed = state.transactions
+        .filter { it.type == TransactionType.EXPENSE && it.category in committedCategories }
+        .sumOf { it.amountCents }
     val discretionary = (expenseCents - committed).coerceAtLeast(0L)
 
     Card(
@@ -306,8 +309,8 @@ private fun SplitBar(
 @Composable
 private fun MonthlyOverviewCard(state: FinanceUiState) {
     val data = lastFiveMonths().map { (label, month, year) ->
-        val transactions = state.transactions.filter {
-            val calendar = Calendar.getInstance().apply { timeInMillis = it.createdAtMillis }
+            val transactions = state.transactions.filter {
+            val calendar = Calendar.getInstance().apply { timeInMillis = it.dateMillis }
             calendar.get(Calendar.MONTH) == month && calendar.get(Calendar.YEAR) == year
         }
         MonthOverview(
@@ -383,11 +386,10 @@ private fun ChartBar(value: Long, maxValue: Long, color: Color, modifier: Modifi
 private fun IncomeSourcesCard(state: FinanceUiState) {
     val sources = state.transactions
         .filter { it.type == TransactionType.INCOME }
-        .groupBy { it.note.ifBlank { "Salary" }.substringBefore(" ").take(18) }
+        .groupBy { it.source.ifBlank { "Other" }.take(18) }
         .mapValues { entry -> entry.value.sumOf { it.amountCents } }
         .toList()
         .sortedByDescending { it.second }
-        .ifEmpty { listOf("Salary" to 0L) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),

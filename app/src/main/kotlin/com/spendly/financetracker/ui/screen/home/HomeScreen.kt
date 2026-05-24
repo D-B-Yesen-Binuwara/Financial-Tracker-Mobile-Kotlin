@@ -67,10 +67,10 @@ fun HomeScreen(
     onDeleteTransaction: (String) -> Unit
 ) {
     val recentTransactions = state.transactions
-        .sortedByDescending { it.createdAtMillis }
+        .sortedByDescending { it.dateMillis }
         .take(6)
-    val userName = displayNameFromEmail(state.session?.email)
-    val userInitials = initialsFromEmail(state.session?.email)
+    val userName = state.profile?.name?.takeIf { it.isNotBlank() } ?: displayNameFromEmail(state.session?.email)
+    val userInitials = initialsFromEmail(userName)
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
