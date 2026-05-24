@@ -70,10 +70,22 @@ fun HomeScreen(
     onAddIncome: () -> Unit,
     onAddExpense: () -> Unit
 ) {
-    val recentTransactions = state.transactions
-        .sortedByDescending { it.dateMillis }
-        .take(6)
-
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val window = (view.context as? Activity)?.window
+        val previousColor = window?.statusBarColor
+        if (window != null) {
+            window.statusBarColor = SpendlyGreen.toArgb()
+            WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = false
+        }
+        onDispose {
+            if (window != null && previousColor != null) {
+                window.statusBarColor = previousColor
+                WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = true
+            }
+        }
+    }
+    val recentTransactions = state.recentTransactions
     val userName = state.profile?.name?.takeIf { it.isNotBlank() } ?: displayNameFromEmail(state.session?.email)
     val userInitials = initialsFromEmail(userName)
 
