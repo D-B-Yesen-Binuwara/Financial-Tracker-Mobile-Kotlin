@@ -1,6 +1,7 @@
 package com.spendly.financetracker.data.repository
 
 import android.content.Context
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
@@ -55,7 +56,12 @@ class FirebaseAuthRepository @Inject constructor(
             defaultCurrency = defaultCurrency.trim().ifBlank { "LKR" }.uppercase(),
             createdAtMillis = now,
             updatedAtMillis = now,
-            isSynced = false
+            isSynced = false,
+            profileImageUri = null,
+            exchangeRateSettings = "",
+            notificationFrequency = null,
+            reminderTime = null,
+            categorySettingsJson = ""
         )
         userProfileDao.upsert(profile)
         firestore.collection("users").document(uid).collection("profile").document("main")
@@ -66,11 +72,36 @@ class FirebaseAuthRepository @Inject constructor(
                     "email" to profile.email,
                     "defaultCurrency" to profile.defaultCurrency,
                     "createdAtMillis" to profile.createdAtMillis,
-                    "updatedAtMillis" to profile.updatedAtMillis
+                    "updatedAtMillis" to profile.updatedAtMillis,
+                    "profileImageUri" to profile.profileImageUri,
+                    "exchangeRateSettings" to profile.exchangeRateSettings,
+                    "notificationFrequency" to profile.notificationFrequency,
+                    "reminderTime" to profile.reminderTime,
+                    "categorySettingsJson" to profile.categorySettingsJson
                 )
             )
             .await()
         userProfileDao.markAsSynced(uid)
+    }
+
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> = runCatching {
+        auth.sendPasswordResetEmail(email.trim()).await()
+    }
+
+    override suspend fun updatePassword(currentPassword: String, newPassword: String): Result<Unit> = runCatching {
+        val user = auth.currentUser ?: error("Please sign in again")
+        val email = user.email ?: error("Please sign in again")
+        user.reauthenticate(EmailAuthProvider.getCredential(email, currentPassword)).await()
+        user.updatePassword(newPassword).await()
+    }
+
+    override suspend fun deleteAccount(currentPassword: String): Result<Unit> = runCatching {
+        val user = auth.currentUser ?: error("Please sign in again")
+        val email = user.email ?: error("Please sign in again")
+        user.reauthenticate(EmailAuthProvider.getCredential(email, currentPassword)).await()
+        val uid = user.uid
+        firestore.collection("users").document(uid).delete().await()
+        user.delete().await()
     }
 
     override fun signOut() {

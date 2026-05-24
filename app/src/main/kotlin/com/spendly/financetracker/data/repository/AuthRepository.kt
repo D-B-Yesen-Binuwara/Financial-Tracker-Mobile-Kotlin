@@ -17,6 +17,12 @@ interface AuthRepository {
         defaultCurrency: String = "LKR"
     ): Result<Unit>
 
+    suspend fun sendPasswordResetEmail(email: String): Result<Unit>
+
+    suspend fun updatePassword(currentPassword: String, newPassword: String): Result<Unit>
+
+    suspend fun deleteAccount(currentPassword: String): Result<Unit>
+
     fun signOut()
 
     fun getCurrentUserId(): String?
