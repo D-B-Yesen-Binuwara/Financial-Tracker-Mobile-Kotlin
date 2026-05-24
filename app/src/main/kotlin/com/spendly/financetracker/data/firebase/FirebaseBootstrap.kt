@@ -13,7 +13,7 @@ object FirebaseBootstrap {
             "string",
             context.packageName
         )
-        return appId != 0
+        return appId != 0// pkg name
     }
 
     fun ensureInitialized(context: Context): Boolean {
