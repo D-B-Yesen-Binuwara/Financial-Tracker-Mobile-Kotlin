@@ -61,7 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.spendly.financetracker.data.repository.TransactionRepository
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.spendly.financetracker.ui.theme.SpendlyGray300
 import com.spendly.financetracker.ui.theme.SpendlyGray500
 import com.spendly.financetracker.ui.theme.SpendlyRed
@@ -74,11 +74,9 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddExpenseScreen(
-    transactionRepository: TransactionRepository,
-    userId: String,
     onBack: () -> Unit
 ) {
-    val viewModel: AddExpenseViewModel = viewModel(factory = AddExpenseViewModel.Factory(transactionRepository, userId))
+    val viewModel: AddExpenseViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(state.isSaved) {

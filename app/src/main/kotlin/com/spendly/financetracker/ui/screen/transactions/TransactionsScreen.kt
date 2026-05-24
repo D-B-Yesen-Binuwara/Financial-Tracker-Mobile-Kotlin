@@ -44,8 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.spendly.financetracker.data.model.FinanceTransaction
-import com.spendly.financetracker.data.repository.TransactionRepository
 import com.spendly.financetracker.ui.components.NoRecordsState
 import com.spendly.financetracker.ui.components.TransactionListItem
 import com.spendly.financetracker.ui.navigation.Screen
@@ -64,11 +64,9 @@ typealias OnTransactionTabSelected = (TransactionTab) -> Unit
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TransactionsScreen(
-    navController: NavController,
-    transactionRepository: TransactionRepository,
-    userId: String
+    navController: NavController
 ) {
-    val viewModel: TransactionsViewModel = viewModel(factory = TransactionsViewModel.Factory(transactionRepository, userId))
+    val viewModel: TransactionsViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
 
     val groupedTransactions = state.filtered.groupBy { formatDateFull(it.createdAtMillis) }
@@ -154,7 +152,11 @@ fun TransactionsScreen(
                                 }
                             }
                             items(items = transactions, key = FinanceTransaction::id) { transaction ->
-                                TransactionListItem(transaction = transaction, showContainer = false)
+                                TransactionListItem(
+                                    transaction = transaction,
+                                    showContainer = false,
+                                    onDelete = { viewModel.delete(transaction) }
+                                )
                                 HorizontalDivider(thickness = 0.5.dp, color = SpendlyGray100)
                             }
                         }
