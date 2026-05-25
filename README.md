@@ -6,7 +6,7 @@ Spendly is a Kotlin-only Jetpack Compose finance tracker scaffolded for Android 
 
 - Java/Kotlin bytecode target: Java 17
 - Minimum SDK: 26
-- Target SDK: 36
+- Target SDK: 34
 - UI: Jetpack Compose only
 - Architecture: MVVM with repositories in the data layer and ViewModel-owned UI state
 - Firebase: Email/Password Authentication and Cloud Firestore
@@ -71,14 +71,15 @@ financetracker/
 │   │   ├── AuthScreen.kt                    # Sign-in / Sign-up screen
 │   │   ├── FirebaseSetupScreen.kt           # Shown when google-services.json is missing
 │   │   ├── DashboardScreen.kt               # Shell that hosts bottom-nav screens
-│   │   ├── MainAppScreen.kt                 # Top-level screen router
+│   │   ├── FinanceTrackerApp.kt             # Root router / top-level app composable
 │   │   │
 │   │   ├── home/
 │   │   │   └── HomeScreen.kt                # Dashboard with summary & recent transactions
 │   │   │
 │   │   ├── transactions/
 │   │   │   ├── TransactionsScreen.kt        # Transaction list with All/Income/Expense filter
-│   │   │   └── AddTransactionScreen.kt      # Add / edit transaction form
+│   │   │   ├── AddIncomeScreen.kt           # Add income transaction form
+│   │   │   └── AddExpenseScreen.kt          # Add expense transaction form
 │   │   │
 │   │   ├── goals/
 │   │   │   └── GoalsScreen.kt               # Goals listing (primary & secondary)
@@ -138,7 +139,8 @@ The project is distributed among 4 team members following MVVM architecture and 
 
 **Files owned:**
 - `ui/screen/transactions/TransactionsScreen.kt` — Transactions listing with filters (All/Income/Expenses)
-- `ui/screen/transactions/AddTransactionScreen.kt` — Add/Edit transaction form
+- `ui/screen/transactions/AddIncomeScreen.kt` — Add income transaction form
+- `ui/screen/transactions/AddExpenseScreen.kt` — Add expense transaction form
 - `ui/components/TransactionListItem.kt` — Individual transaction card display
 
 **Shared components:**
@@ -201,7 +203,7 @@ The project is distributed among 4 team members following MVVM architecture and 
 
 3. **Chamika** — Profile screen → `ProfileScreen.kt`
 4. **Chamika** — Home/Dashboard screen → `HomeScreen.kt`
-5. **Yesen** — Transactions screen → `TransactionsScreen.kt`, `AddTransactionScreen.kt`
+5. **Yesen** — Transactions screen → `TransactionsScreen.kt`, `AddIncomeScreen.kt`, `AddExpenseScreen.kt`
 6. **Nikini** — Goals screen → `GoalsScreen.kt`
 
 ### Phase 3 — Advanced Features (Week 4+)
@@ -244,15 +246,15 @@ This project follows MVVM. The ViewModel owns all state and exposes it as a sing
         └── FinanceTrackerApp          # collects uiState; routes to correct screen
                 ├── FirebaseSetupScreen    # shown when google-services.json is absent
                 ├── AuthScreen             # sign-in / create-account  (Mahima)
-                └── MainAppScreen          # tab router + flow controller
-                        ├── AppBottomNavigation        (component)
+                └── FinanceTrackerApp       # tab router + flow controller (root composable)
+                    ├── AppBottomNavigation        (component)
                         ├── HomeScreen                 (Chamika)
                         │     ├── HeaderSection
                         │     ├── SummaryPanel / SummaryCard
                         │     ├── GoalCard
                         │     └── TransactionListItem
                         ├── TransactionsScreen          (Yesen)
-                        │     ├── AddTransactionScreen
+                        │     ├── AddIncomeScreen / AddExpenseScreen
                         │     ├── SummaryPanel
                         │     └── TransactionListItem
                         ├── GoalsScreen                 (Nikini)
@@ -343,7 +345,7 @@ financetracker/
 │   ├── screen/
 │   │   ├── AuthScreen.kt                    # Sign-in / Sign-up form (stub UI is fine)
 │   │   ├── FirebaseSetupScreen.kt           # Shown when google-services.json is absent
-│   │   ├── MainAppScreen.kt                 # Tab router — switches between the 5 feature screens
+│   │   ├── MainAppScreen.kt                 # (legacy) previous tab router implementation — FinanceTrackerApp is the current router
 │   │   └── DashboardScreen.kt              # Legacy scaffold screen (kept for reference)
 │   │
 │   ├── components/
@@ -362,9 +364,9 @@ financetracker/
 | `FinanceTrackerApp.kt` | Called directly from `MainActivity`; collects `uiState` and routes to the correct screen |
 | `AuthScreen.kt` | `FinanceTrackerApp` renders this when `state.session == null` |
 | `FirebaseSetupScreen.kt` | `FinanceTrackerApp` renders this when `state.isFirebaseConfigured == false` |
-| `MainAppScreen.kt` | `FinanceTrackerApp` renders this when the user is signed in; hosts the tab router and `AppBottomNavigation` |
+| `FinanceTrackerApp.kt` | Called by `MainActivity`; renders screens and hosts the tab router / `AppBottomNavigation` |
 | `DashboardScreen.kt` | Legacy scaffold screen — still referenced; must exist to compile |
-| `AppBottomNavigation.kt` | Rendered inside `MainAppScreen`; missing = compile error |
+| `AppBottomNavigation.kt` | Rendered inside `FinanceTrackerApp`; missing = compile error |
 | `FirebaseBootstrap.kt` | Called by `FirebaseAuthRepository` to check config; drives `isFirebaseConfigured` flag |
 | `FinanceViewModel.kt` | Constructed in `MainActivity`; passed into every composable — missing = crash |
 | `FinanceUiState.kt` | Defines `FinanceUiState`, `AppTab`, `TransactionTab`, `AuthMode`, `Goal` — all referenced by ViewModel and screens |
@@ -372,3 +374,153 @@ financetracker/
 | `TransactionRepository.kt` + `FirebaseTransactionRepository.kt` | Same — required by `FinanceViewModel.Factory` |
 | `FinanceTransaction.kt` + `UserSession.kt` | Used by repositories, `FinanceUiState`, and screen composables |
 | `Color.kt`, `Theme.kt`, `Type.kt` | `MainActivity` wraps everything in `FinanceTrackerTheme`; missing = compile error |
+
+---
+
+## Build & Run (detailed)
+
+These instructions assume you have Android Studio or the Android SDK installed and a working Java/JDK environment compatible with the project's Gradle settings.
+
+1. Ensure the Gradle wrapper is executable on your machine. On Windows you can use the included `gradlew.bat`.
+
+2. Build the debug APK:
+
+```bash
+./gradlew.bat assembleDebug
+```
+
+3. Install to a connected device or emulator:
+
+```bash
+./gradlew.bat installDebug
+```
+
+4. Run unit tests locally:
+
+```bash
+./gradlew.bat test
+```
+
+5. Run instrumentation tests (requires a connected device or emulator):
+
+```bash
+./gradlew.bat connectedAndroidTest
+```
+
+Notes:
+- Prefer Android Studio for iterative development — it handles signing, emulators and device management.
+- If you change `google-services.json`, do a clean build to ensure generated sources are updated:
+
+```bash
+./gradlew.bat clean assembleDebug
+```
+
+## Firebase — practical tips
+
+- The app includes a `FirebaseSetupScreen` that appears when a Firebase config is not detected. This allows compiling and testing UI without a real Firebase project.
+- When adding `app/google-services.json`, match the package name `com.spendly.financetracker` used in `AndroidManifest.xml`.
+- After uploading `firestore.rules` and `firestore.indexes.json` to your Firebase project, test client access with a test user to verify rules behave as expected.
+
+Recommended quick checklist when configuring Firebase for development:
+- Create a dedicated Firebase project for development and another for production.
+- Enable Authentication → Email/Password for basic sign-in flows.
+- Create some test documents in Firestore and verify read/write with the app.
+- Use the Firebase Emulator Suite for local integration testing when possible.
+
+## Architecture & design decisions (concise)
+
+- Single `FinanceViewModel` drives the entire `FinanceUiState` exposed as `StateFlow`.
+- Screens are pure composables: they accept `FinanceUiState` + typed callbacks and never call `viewModel()` directly.
+- Repositories provide interfaces in `data/repository` and concrete implementations under `data/remote` or `data/local`.
+- DI is provided via `di/AppModule.kt` and `di/RepositoryModule.kt` — add bindings here for new data sources.
+
+Why this matters:
+- Keeping ViewModel creation centralised makes it easier to reason about state and test.
+- Interfaces + DI make swapping implementations (Room, Firestore, network) straightforward.
+
+## Developer workflow and conventions
+
+- Branching:
+    - `main` contains stable development-ready code.
+    - Create feature branches named `feature/<short-name>` or `fix/<short-desc>`.
+
+- Commits:
+    - Keep commits focused and atomic.
+    - Use present-tense imperative messages, e.g. "Add TransactionForm validation".
+
+- Code style:
+    - Follow Kotlin conventions. Use 2-space indents consistent with the project.
+    - Prefer descriptive names over abbreviations.
+    - Avoid one-letter variables except in local loop counters.
+
+- Pull requests:
+    - PRs should include a short description, affected screens/files, and testing notes.
+    - Request at least one review before merging.
+
+## Testing guidance
+
+- Unit tests live under `app/src/test` and instrumentation tests under `app/src/androidTest`.
+- Use `kotlinx.coroutines.test` for ViewModel coroutine testing where `StateFlow` updates are asserted.
+- For UI tests, prefer Compose testing utilities when interacting with Compose UI nodes.
+
+Example commands:
+
+```bash
+./gradlew.bat test                # unit tests
+./gradlew.bat connectedAndroidTest  # instrumentation tests
+```
+
+## Debugging & common gotchas
+
+- Missing `google-services.json` will not break compilation but will show `FirebaseSetupScreen` at runtime.
+- If you see unresolved symbols for theme files (`Color.kt`, `Theme.kt`, `Type.kt`) ensure the package path is correct and Gradle has executed a successful sync.
+- When switching branches with Gradle changes, run `./gradlew.bat clean` and let Android Studio sync to avoid build cache issues.
+
+## Adding a new data source (short guide)
+
+1. Define a repository interface under `data/repository` describing the operations your feature needs.
+2. Add a concrete implementation under `data/remote` (for Firestore/Network) or `data/local` (for Room).
+3. Register the implementation in `di/RepositoryModule.kt` so the ViewModel receives it.
+4. Add unit tests for the repository behaviour and integration tests if possible.
+
+## Contributing checklist (for PRs)
+
+- [ ] Code builds locally and CI (if enabled) passes.
+- [ ] New code includes unit tests where appropriate.
+- [ ] UI changes include a screenshot or description in the PR.
+- [ ] Update `README.md` or project docs if the change affects developer setup.
+
+## Release & versioning notes
+
+- This repository does not enforce a strict release process by default. Tagging releases with semantic versions (vMAJOR.MINOR.PATCH) is recommended.
+- Keep `gradle/libs.versions.toml` updated for dependency upgrades and audit regularly.
+
+## File map — where to look first
+
+- App entry: `app/src/main/kotlin/com/spendly/financetracker/MainActivity.kt`
+- Root composable / router: `app/src/main/kotlin/com/spendly/financetracker/ui/FinanceTrackerApp.kt`
+- ViewModel: `app/src/main/kotlin/com/spendly/financetracker/ui/viewmodel/FinanceViewModel.kt`
+- UI screens: `app/src/main/kotlin/com/spendly/financetracker/ui/screen/`
+- Repositories & models: `app/src/main/kotlin/com/spendly/financetracker/data/`
+
+If you need help locating a file, ask and I can point directly to the file path.
+
+## Troubleshooting checklist (quick)
+
+- Build failures after dependency updates:
+    - Run `./gradlew.bat clean` then `./gradlew.bat build`.
+    - If Android Studio shows gradle sync errors, click "Sync Project with Gradle Files".
+
+- Emulator/device installation fails:
+    - Ensure developer mode and USB debugging are enabled (device).
+    - Increase emulator RAM if it fails to boot.
+
+- Firebase permission errors:
+    - Inspect `firestore.rules` and simulate rules via the Firebase emulator or console.
+
+## Security considerations
+
+- Do not commit production `google-services.json` containing sensitive project settings into a public repository.
+- Keep `firestore.rules` restrictive for production — allow only authorised access.
+
+
