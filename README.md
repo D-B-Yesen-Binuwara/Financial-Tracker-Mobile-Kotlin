@@ -242,7 +242,14 @@ The project is distributed among 4 team members following MVVM architecture and 
     - `data/local/entity/IncomeEntryEntity.kt`
     - `data/local/entity/SavingsGoalEntity.kt`
     - `data/local/entity/UserProfileEntity.kt`
-
+  - Analytics page and backend logic
+    - `ui/screen/analytics/AnalyticsScreen.kt`
+    - `ui/viewmodel/AnalyticsViewModel.kt`
+    - `data/service/CurrencyRateService.kt`
+    - `data/service/CryptoRateService.kt`
+    - `util/Mappers.kt`
+    - `util/SyncManager.kt`
+    - `worker/SpendlySyncWorker.kt`
 ---
 
 ## Key Versions
