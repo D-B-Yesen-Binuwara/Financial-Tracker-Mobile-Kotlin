@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,10 +31,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -53,11 +53,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -72,6 +74,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.spendly.financetracker.ui.components.NoGoalState
+import com.spendly.financetracker.ui.theme.SpendlyAmber
 import com.spendly.financetracker.ui.theme.SpendlyGray300
 import com.spendly.financetracker.ui.theme.SpendlyGray500
 import com.spendly.financetracker.ui.theme.SpendlyGray700
@@ -79,12 +82,18 @@ import com.spendly.financetracker.ui.theme.SpendlyGray900
 import com.spendly.financetracker.ui.theme.SpendlyGreen
 import com.spendly.financetracker.ui.theme.SpendlyGreenDark
 import com.spendly.financetracker.ui.theme.SpendlyGreenLight
+import com.spendly.financetracker.ui.theme.SpendlyRed
 import com.spendly.financetracker.ui.util.formatMoney
+import com.spendly.financetracker.ui.util.goalIconForKey
+import com.spendly.financetracker.ui.util.goalIconOptions
+import com.spendly.financetracker.ui.util.suggestedGoalIconKey
 import com.spendly.financetracker.ui.viewmodel.FinanceUiState
 import com.spendly.financetracker.ui.viewmodel.Goal
 import com.spendly.financetracker.ui.viewmodel.GoalDraft
+import com.spendly.financetracker.ui.viewmodel.GoalMonthlySavingUi
+import com.spendly.financetracker.ui.viewmodel.goalMonthlySavingsData
+import com.spendly.financetracker.ui.viewmodel.requiredMonthlySavingsCents
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -102,11 +111,16 @@ internal fun GoalsScreenContent(
     onAddGoal: OnAddGoal,
     onGoalSelected: OnGoalSelected
 ) {
-    val otherGoals = state.goals.filter { !it.isPrimary }
+    val achievedGoals = state.goals.filter { it.isAchievedGoal() }
+    val primaryGoals = state.primaryGoals.filterNot { it.isAchievedGoal() }
+    val otherGoals = state.otherGoals.filterNot { it.isAchievedGoal() }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Goal Tracker", fontWeight = FontWeight.Bold) })
+            TopAppBar(
+                windowInsets = WindowInsets(0.dp),
+                title = { Text("Goal Tracker", fontWeight = FontWeight.Bold) }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -134,20 +148,20 @@ internal fun GoalsScreenContent(
                     NoGoalState(onSetGoal = onAddGoal)
                 }
             } else {
-                state.primaryGoal?.let { goal ->
+                if (primaryGoals.isNotEmpty()) {
                     item {
                         Text(
-                            "Primary Goal",
+                            "Primary Goals",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    item {
+                }
+                items(primaryGoals, key = { it.id }) { goal ->
                         PrimaryGoalCard(
                             goal = goal,
                             onClick = { onGoalSelected(goal.id) }
                         )
-                    }
                 }
 
                 if (otherGoals.isNotEmpty()) {
@@ -159,6 +173,21 @@ internal fun GoalsScreenContent(
                         )
                     }
                     items(otherGoals, key = { it.id }) { goal ->
+                        OtherGoalRow(
+                            goal = goal,
+                            onClick = { onGoalSelected(goal.id) }
+                        )
+                    }
+                }
+                if (achievedGoals.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Achieved Goals",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    items(achievedGoals, key = { it.id }) { goal ->
                         OtherGoalRow(
                             goal = goal,
                             onClick = { onGoalSelected(goal.id) }
@@ -179,9 +208,11 @@ internal fun EditGoalScreenContent(
     onDelete: OnDeleteGoal
 ) {
     var goalName by rememberSaveable { mutableStateOf(goal.title) }
-    var status by rememberSaveable { mutableStateOf(goal.status) }
+    var status by rememberSaveable { mutableStateOf(normalizedGoalStatus(goal.status)) }
     var targetAmount by rememberSaveable { mutableStateOf((goal.targetCents / 100L).toString()) }
     var targetDate by rememberSaveable { mutableStateOf(goal.dueDate) }
+    var isPrimary by rememberSaveable { mutableStateOf(goal.isPrimary) }
+    var selectedIconKey by rememberSaveable { mutableStateOf(goal.iconKey.ifBlank { suggestedGoalIconKey(goal.title) }) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
 
@@ -191,13 +222,16 @@ internal fun EditGoalScreenContent(
             status = status,
             targetAmount = targetAmount,
             targetDate = targetDate,
-            initialSaved = ""
+            initialSaved = "",
+            isPrimary = isPrimary,
+            iconKey = selectedIconKey
         ))
     }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
+                windowInsets = WindowInsets(0.dp),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -288,9 +322,17 @@ internal fun EditGoalScreenContent(
                 onValueChange = { goalName = it },
                 placeholder = "e.g. Dream Vacation"
             )
+            GoalIconSelector(
+                selectedIconKey = selectedIconKey,
+                onIconSelected = { selectedIconKey = it }
+            )
             GoalStatusSelector(
                 selectedStatus = status,
                 onStatusSelected = { status = it }
+            )
+            GoalPrimarySwitch(
+                checked = isPrimary,
+                onCheckedChange = { isPrimary = it }
             )
             GoalFormField(
                 label = "Target Amount (LKR)",
@@ -366,12 +408,19 @@ internal fun AddGoalScreenContent(
     onSave: OnSaveGoal
 ) {
     var goalName by rememberSaveable { mutableStateOf("") }
-    var status by rememberSaveable { mutableStateOf("On track") }
+    var status by rememberSaveable { mutableStateOf("Tracking") }
     var targetAmount by rememberSaveable { mutableStateOf("") }
     var targetDate by rememberSaveable { mutableStateOf("") }
     var initialSaved by rememberSaveable { mutableStateOf("") }
+    var isPrimary by rememberSaveable { mutableStateOf(false) }
+    var selectedIconKey by rememberSaveable { mutableStateOf("goal") }
+    var iconManuallySelected by rememberSaveable { mutableStateOf(false) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
+
+    LaunchedEffect(goalName) {
+        if (!iconManuallySelected) selectedIconKey = suggestedGoalIconKey(goalName)
+    }
 
     fun saveGoal() {
         onSave(
@@ -380,7 +429,9 @@ internal fun AddGoalScreenContent(
                 status = status,
                 targetAmount = targetAmount,
                 targetDate = targetDate,
-                initialSaved = initialSaved
+                initialSaved = initialSaved,
+                isPrimary = isPrimary,
+                iconKey = selectedIconKey
             )
         )
     }
@@ -388,6 +439,7 @@ internal fun AddGoalScreenContent(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
+                windowInsets = WindowInsets(0.dp),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -454,9 +506,20 @@ internal fun AddGoalScreenContent(
                 onValueChange = { goalName = it },
                 placeholder = "e.g. Dream Vacation"
             )
+            GoalIconSelector(
+                selectedIconKey = selectedIconKey,
+                onIconSelected = {
+                    selectedIconKey = it
+                    iconManuallySelected = true
+                }
+            )
             GoalStatusSelector(
                 selectedStatus = status,
                 onStatusSelected = { status = it }
+            )
+            GoalPrimarySwitch(
+                checked = isPrimary,
+                onCheckedChange = { isPrimary = it }
             )
             GoalFormField(
                 label = "Target Amount",
@@ -512,7 +575,7 @@ private fun GoalStatusSelector(
     selectedStatus: String,
     onStatusSelected: (String) -> Unit
 ) {
-    val statuses = listOf("On track", "Not On track")
+    val statuses = listOf("Tracking", "Stopped", "Done")
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -534,6 +597,26 @@ private fun GoalStatusSelector(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun GoalPrimarySwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SpendlyGreenLight, RoundedCornerShape(12.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Set as primary goal", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+            Text("Primary goals appear in the Primary Goals section.", style = MaterialTheme.typography.labelSmall, color = SpendlyGray700)
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -576,6 +659,51 @@ private fun GoalDateField(
 }
 
 @Composable
+private fun GoalIconSelector(
+    selectedIconKey: String,
+    onIconSelected: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Icon",
+            style = MaterialTheme.typography.labelSmall,
+            color = SpendlyGray900,
+            fontWeight = FontWeight.Bold
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(goalIconOptions, key = { it.key }) { option ->
+                val selected = option.key == selectedIconKey
+                Surface(
+                    onClick = { onIconSelected(option.key) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (selected) SpendlyGreen else SpendlyGreenLight,
+                    border = if (selected) null else BorderStroke(0.5.dp, SpendlyGray300)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            option.icon,
+                            contentDescription = option.label,
+                            tint = if (selected) Color.White else SpendlyGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            option.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (selected) Color.White else SpendlyGray700,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun GoalFormField(
     label: String,
     value: String,
@@ -607,36 +735,6 @@ private fun GoalFormField(
 private fun formatGoalDate(timeMillis: Long): String =
     SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(timeMillis))
 
-private fun requiredMonthlySavingsCents(goal: Goal): Long {
-    if (goal.remainingCents <= 0L) return 0L
-
-    val monthsRemaining = monthsUntilDueDate(goal.dueDate)
-    return (goal.remainingCents + monthsRemaining - 1L) / monthsRemaining
-}
-
-private fun monthsUntilDueDate(dueDate: String): Long {
-    val due = parseGoalDueDate(dueDate) ?: return 12L
-    val now = Calendar.getInstance()
-    val target = Calendar.getInstance().apply { time = due }
-    val monthDelta = (target.get(Calendar.YEAR) - now.get(Calendar.YEAR)) * 12 +
-        (target.get(Calendar.MONTH) - now.get(Calendar.MONTH))
-    val dayAdjustment = if (target.get(Calendar.DAY_OF_MONTH) > now.get(Calendar.DAY_OF_MONTH)) 1 else 0
-
-    return (monthDelta + dayAdjustment).coerceAtLeast(1).toLong()
-}
-
-private fun parseGoalDueDate(dueDate: String): Date? {
-    val patterns = listOf("MMM d, yyyy", "MMM yyyy", "MMMM yyyy")
-
-    return patterns.firstNotNullOfOrNull { pattern ->
-        runCatching {
-            SimpleDateFormat(pattern, Locale.getDefault()).apply {
-                isLenient = false
-            }.parse(dueDate)
-        }.getOrNull()
-    }
-}
-
 @Composable
 private fun PrimaryGoalCard(
     goal: Goal,
@@ -651,6 +749,20 @@ private fun PrimaryGoalCard(
     ) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        goalIconForKey(goal.iconKey.ifBlank { suggestedGoalIconKey(goal.title) }),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
                 Text(
                     goal.title,
                     modifier = Modifier.weight(1f),
@@ -668,7 +780,7 @@ private fun PrimaryGoalCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
-                        Text(goal.status.uppercase(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        Text(normalizedGoalStatus(goal.status).uppercase(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                     }
                 }
             }
@@ -676,7 +788,7 @@ private fun PrimaryGoalCard(
             Text(
                 "${goal.dueDate} - ${formatMoney(goal.remainingCents)} remaining",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.82f)
+                color = if (goal.isTargetDateExpired()) SpendlyRed else Color.White.copy(alpha = 0.82f)
             )
 
             LinearProgressIndicator(
@@ -685,7 +797,7 @@ private fun PrimaryGoalCard(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp)),
-                color = Color.White,
+                color = goalProgressColor(goal, Color.White),
                 trackColor = Color.White.copy(alpha = 0.3f)
             )
 
@@ -730,7 +842,7 @@ private fun OtherGoalRow(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    if (goal.title.contains("mac", ignoreCase = true)) Icons.Default.Laptop else Icons.Default.Flag,
+                    goalIconForKey(goal.iconKey.ifBlank { suggestedGoalIconKey(goal.title) }),
                     contentDescription = null,
                     tint = SpendlyGreen
                 )
@@ -739,7 +851,7 @@ private fun OtherGoalRow(
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row {
                     Text(goal.title, modifier = Modifier.weight(1f), color = SpendlyGray900, fontWeight = FontWeight.Bold)
-                    Text("${goal.progressPercent}%", color = SpendlyGreen, fontWeight = FontWeight.Bold)
+                    Text("${goal.progressPercent}%", color = goalProgressColor(goal), fontWeight = FontWeight.Bold)
                 }
                 LinearProgressIndicator(
                     progress = { goal.progressPercent / 100f },
@@ -747,13 +859,18 @@ private fun OtherGoalRow(
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp)),
-                    color = SpendlyGreen,
+                    color = goalProgressColor(goal),
                     trackColor = SpendlyGreenLight
                 )
                 Text(
                     "${formatMoney(goal.savedCents)} / ${formatMoney(goal.targetCents)}",
                     style = MaterialTheme.typography.labelSmall,
                     color = SpendlyGray500
+                )
+                Text(
+                    "${goal.dueDate} • ${normalizedGoalStatus(goal.status)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (goal.isTargetDateExpired()) SpendlyRed else SpendlyGray700
                 )
             }
             Icon(Icons.Default.ChevronRight, contentDescription = null, tint = SpendlyGray700)
@@ -779,6 +896,7 @@ internal fun GoalDetailScreenContent(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0.dp),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -787,8 +905,16 @@ internal fun GoalDetailScreenContent(
                 title = { Text(goal?.title ?: "Goal Details", fontWeight = FontWeight.Bold) },
                 actions = {
                     if (goal != null) {
-                        IconButton(onClick = { onEdit(goal.id) }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit Goal")
+                        Button(
+                            onClick = { onEdit(goal.id) },
+                            colors = ButtonDefaults.buttonColors(containerColor = SpendlyGreenLight, contentColor = SpendlyGreen),
+                            shape = RoundedCornerShape(20.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                            modifier = Modifier.padding(end = 8.dp).height(34.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Edit", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -867,7 +993,7 @@ private fun GoalDetailSummaryCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            if (goal.title.contains("mac", ignoreCase = true)) Icons.Default.Laptop else Icons.Default.Flag,
+                            goalIconForKey(goal.iconKey.ifBlank { suggestedGoalIconKey(goal.title) }),
                             contentDescription = null,
                             tint = Color.White
                         )
@@ -882,7 +1008,7 @@ private fun GoalDetailSummaryCard(
                         Text(
                             "Target: ${goal.dueDate}",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.82f)
+                            color = if (goal.isTargetDateExpired()) SpendlyRed else Color.White.copy(alpha = 0.82f)
                         )
                         Text(
                             "Remaining: ${formatMoney(goal.remainingCents)}",
@@ -972,7 +1098,7 @@ private fun GoalDetailSummaryCard(
 
 @Composable
 private fun GoalMonthlySavingsCard(goal: Goal) {
-    val savings = monthlySavingsData(goal)
+    val savings = goalMonthlySavingsData(goal)
     val maxAmount = savings.maxOfOrNull { it.amountCents }?.coerceAtLeast(1L) ?: 1L
 
     Card(
@@ -999,6 +1125,15 @@ private fun GoalMonthlySavingsCard(goal: Goal) {
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
+                Column(
+                    modifier = Modifier.height(138.dp).padding(top = 4.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Text(formatCompactChartAmount(maxAmount), style = MaterialTheme.typography.labelSmall, color = SpendlyGray500)
+                    Text(formatCompactChartAmount(maxAmount / 2), style = MaterialTheme.typography.labelSmall, color = SpendlyGray500)
+                    Text("0", style = MaterialTheme.typography.labelSmall, color = SpendlyGray500)
+                }
                 savings.forEach { item ->
                     GoalMonthlySavingsBar(
                         item = item,
@@ -1013,11 +1148,12 @@ private fun GoalMonthlySavingsCard(goal: Goal) {
 
 @Composable
 private fun GoalMonthlySavingsBar(
-    item: GoalMonthlySaving,
+    item: GoalMonthlySavingUi,
     maxAmount: Long,
     modifier: Modifier = Modifier
 ) {
-    val percent = (item.amountCents.toFloat() / maxAmount.toFloat()).coerceIn(0f, 1f)
+    val percent = item.percent.takeIf { it > 0f }
+        ?: (item.amountCents.toFloat() / maxAmount.toFloat()).coerceIn(0f, 1f)
     val barHeight = if (item.amountCents <= 0L) 0.dp else 14.dp + (112.dp * percent)
 
     Column(
@@ -1104,32 +1240,6 @@ private fun AddSavingsDialog(
     )
 }
 
-private data class GoalMonthlySaving(
-    val month: String,
-    val amountCents: Long
-)
-
-private fun monthlySavingsData(goal: Goal): List<GoalMonthlySaving> {
-    val monthLabels = lastFiveGoalMonthLabels()
-    return monthLabels.mapIndexed { index, label ->
-        GoalMonthlySaving(
-            month = label,
-            amountCents = if (index == monthLabels.lastIndex) goal.savedCents else 0L
-        )
-    }
-}
-
-private fun lastFiveGoalMonthLabels(): List<String> {
-    val formatter = SimpleDateFormat("MMM", Locale.getDefault())
-    val calendar = Calendar.getInstance()
-
-    return (4 downTo 0).map { offset ->
-        val monthCalendar = calendar.clone() as Calendar
-        monthCalendar.add(Calendar.MONTH, -offset)
-        formatter.format(Date(monthCalendar.timeInMillis))
-    }
-}
-
 private fun formatCompactChartAmount(cents: Long): String {
     val amount = cents / 100L
 
@@ -1139,3 +1249,24 @@ private fun formatCompactChartAmount(cents: Long): String {
         else -> amount.toString()
     }
 }
+
+private fun Goal.isAchievedGoal(): Boolean =
+    targetCents > 0L && (savedCents >= targetCents || normalizedGoalStatus(status) == "Done")
+
+private fun Goal.isTargetDateExpired(): Boolean =
+    dueDateMillis > 0L && dueDateMillis < System.currentTimeMillis() && !isAchievedGoal()
+
+private fun normalizedGoalStatus(status: String): String =
+    when (status.lowercase()) {
+        "on track", "tracking" -> "Tracking"
+        "not on track", "stopped" -> "Stopped"
+        "done" -> "Done"
+        else -> "Tracking"
+    }
+
+private fun goalProgressColor(goal: Goal, defaultColor: Color = SpendlyGreen): Color =
+    when (normalizedGoalStatus(goal.status)) {
+        "Stopped" -> SpendlyAmber
+        "Done" -> SpendlyGreen
+        else -> defaultColor
+    }
