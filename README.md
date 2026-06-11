@@ -234,7 +234,7 @@ The project is distributed among 4 team members following MVVM architecture and 
     - `data/local/dao/GoalDao.kt`
     - `data/local/dao/UserProfileDao.kt`
     - `data/local/dao/ExpenseDao.kt`
-- M V M Linash [IT23442566] - DB and entity setup
+- M V M Linash [IT23442566] - DB and entity setup, Analytics
   - Database setup
     - `data/local/db/SpendlyDatabase.kt`
   - Entity setup
@@ -250,6 +250,7 @@ The project is distributed among 4 team members following MVVM architecture and 
     - `util/Mappers.kt`
     - `util/SyncManager.kt`
     - `worker/SpendlySyncWorker.kt`
+
 ---
 
 ## Key Versions
