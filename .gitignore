@@ -8,6 +8,7 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/inspectionProfiles/
 .DS_Store
 /build
 **/build/
@@ -20,3 +21,6 @@ replay_pid*.log
 .cora
 .cora/
 .cora/*
+
+Errors-fix.md
+structure.md
